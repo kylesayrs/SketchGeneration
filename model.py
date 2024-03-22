@@ -6,7 +6,7 @@ from torch.distributions import (
     MultivariateNormal,
     MixtureSameFamily
 )
-from functools import cache
+from functools import cache, cached_property
 
 from config import ModelConfig
 
@@ -37,6 +37,8 @@ class SketchCritic(torch.nn.Module):
         components = MultivariateNormal(mus, scale_tril=scale_tril)
         mixture_model = MixtureSameFamily(mixture, components)
 
+        # TODO: need to convert positions to relative positions
+
         return mixture_model.log_prob(position_true)
 
 
@@ -50,14 +52,23 @@ class SketchCritic(torch.nn.Module):
 
     def forward(
         self,
-        x_true: torch.Tensor,
+        xs: torch.Tensor,
         logits_pred: torch.Tensor,
         mus_pred: torch.Tensor,
         sigmas_pred: torch.Tensor,
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
+        print(f"xs: {xs.shape}")
         # unpack
-        position_true, pen_true = torch.tensor_split(x_true, 3)
+        asdf = torch.tensor_split(xs, [2], dim=2)
+        print(len(asdf))
+        print(asdf[0].shape)
+        print(asdf[1].shape)
+        print(asdf[2].shape)
+        exit(0)
+        print(f"position_true: {position_true.shape}")
+        print(f"pen_true: {pen_true.shape}")
+        exit(0)
 
         # compute separate losses
         position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_pred)
@@ -89,26 +100,14 @@ class SketchDecoder(torch.nn.Module):
         self.to(torch.float32)
 
 
-    @cache
-    def _get_output_splits(self) -> List[Tuple[int, int]]:
-        logits_size = self.model_config.num_components
-        logits_end = 0 + logits_size
-
-        mus_size = 2 * self.model_config.num_components
-        mus_end = logits_end + mus_size
-
-        sigmas_size = 3 * self.model_config.num_components
-        sigmas_end = mus_end + sigmas_size
-        
-        pen_size = 3
-        pen_end = sigmas_end + pen_size
-
-
+    @cached_property
+    def _split_args(self, ) -> List[Tuple[int, int]]:
         return [
-            (0, logits_end),
-            (logits_end, mus_end),
-            (mus_end, sigmas_end),
-            (sigmas_end, pen_end)
+            self.model_config.num_components,
+            2 * self.model_config.num_components,
+            3 * self.model_config.num_components,
+            3,
+            self.model_config.hidden_size - 6 * self.model_config.num_components - 3,
         ]
 
 
@@ -118,12 +117,8 @@ class SketchDecoder(torch.nn.Module):
 
         # TODO: experiment with adding a linear layer here
 
-        splits = self._get_output_splits()
+        logits_pred, mus_pred, sigmas_pred, pen_pred, _ = torch.split(ys, self._split_args, dim=2)
         
-        logits_pred = self.sigmoid(ys[:, :, splits[0][0]: splits[0][1]])
-        mus_pred    = self.sigmoid(ys[:, :, splits[1][0]: splits[1][1]])
-        sigmas_pred = torch.exp(   ys[:, :, splits[2][0]: splits[2][1]])
-        pen_pred    = self.sigmoid(ys[:, :, splits[3][0]: splits[3][1]])
         print(f"logits_pred: {logits_pred.shape}")
         print(f"mus_pred: {mus_pred.shape}")
         print(f"sigmas_pred: {sigmas_pred.shape}")

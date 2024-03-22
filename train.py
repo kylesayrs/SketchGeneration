@@ -50,10 +50,10 @@ def train():
             # forward
             optimizer.zero_grad()
             logits_pred, mus_pred, sigmas_pred, pen_pred = decoder(samples)
-            exit(0)
 
             # compute loss
             loss = criterion(samples, logits_pred, mus_pred, sigmas_pred, pen_pred)
+            exit(0)
 
             # backwards
             loss.backwards()
