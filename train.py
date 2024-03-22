@@ -32,7 +32,7 @@ def train():
 
     # TESTING
     drawings *= 0
-    drawings[:, :, 4] = 1
+    drawings[:, :, 3] = 1
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
