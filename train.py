@@ -31,8 +31,9 @@ def train():
     drawings = torch.tensor(drawings, dtype=torch.float32)
 
     # TESTING
-    drawings[:, :, :2] *= 0
-
+    drawings *= 0
+    drawings[:, :, 4] = 1
+    
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
     # split data
@@ -51,10 +52,10 @@ def train():
         for batch_index, samples in enumerate(train_dataloader):            
             # forward
             optimizer.zero_grad()
-            logits_pred, mus_pred, sigmas_pred, pen_pred = decoder(samples)
+            logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred = decoder(samples)
 
             # compute loss
-            loss = criterion(samples, logits_pred, mus_pred, sigmas_pred, pen_pred)
+            loss = criterion(samples, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred)
             print(f"loss: {loss.item()}")
 
             # backwards

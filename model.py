@@ -29,14 +29,15 @@ class SketchCritic(torch.nn.Module):
         position_true: torch.Tensor,
         logits: torch.Tensor,
         mus: torch.Tensor,
-        sigmas: torch.Tensor
+        sigmas_x: torch.Tensor,
+        sigmas_y: torch.Tensor,
+        sigmas_xy: torch.Tensor
     ) -> torch.Tensor:
         # convert to scale lower triangle
-        scale_tril = torch.zeros((*sigmas.shape[:-1], 2, 2))
-        first_indices, second_indices = torch.tril_indices(2, 2)
-        scale_tril[:, :, :, first_indices, second_indices] = sigmas
-
-        print(mus[0, 0])
+        scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
+        scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=1e-6)
+        scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=1e-6)
+        scale_tril[:, :, :, 1, 0] = sigmas_xy
 
         mixture = Categorical(logits=logits)
         components = MultivariateNormal(mus, scale_tril=scale_tril)
@@ -54,8 +55,8 @@ class SketchCritic(torch.nn.Module):
         pen_true: torch.Tensor,
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
-        #print(pen_true)
-        #print(pen_pred)
+        print(pen_true[0, 0])
+        print(pen_pred[0, 0])
         return self.cross_entropy(
             pen_true.reshape(-1, pen_true.shape[-1]),
             pen_pred.reshape(-1, pen_pred.shape[-1])
@@ -67,15 +68,20 @@ class SketchCritic(torch.nn.Module):
         xs: torch.Tensor,
         logits_pred: torch.Tensor,
         mus_pred: torch.Tensor,
-        sigmas_pred: torch.Tensor,
+        sigmas_x: torch.Tensor,
+        sigmas_y: torch.Tensor,
+        sigmas_xy: torch.Tensor,
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
         # unpack
         position_true, pen_true = torch.split(xs, [2, 3], dim=2)
 
         # compute separate losses
-        position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_pred)
+        position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
+
+        print(position_true[0, 0])
+        print(mus_pred[0, 0, 0])
 
         print(f"position_loss: {position_loss.item()}")
         print(f"pen_loss: {pen_loss.item()}")
@@ -112,7 +118,9 @@ class SketchDecoder(torch.nn.Module):
         return [
             self.model_config.num_components,
             2 * self.model_config.num_components,
-            3 * self.model_config.num_components,
+            self.model_config.num_components,
+            self.model_config.num_components,
+            self.model_config.num_components,
             3,
             self.model_config.hidden_size - 6 * self.model_config.num_components - 3,
         ]
@@ -123,11 +131,24 @@ class SketchDecoder(torch.nn.Module):
 
         # TODO: experiment with adding a linear layer here
 
-        logits_pred, mus_pred, sigmas_pred, pen_pred, _ = torch.split(ys, self._split_args, dim=2)
+        # unpack outputs
+        logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred, _ = torch.split(ys, self._split_args, dim=2)
+
+        # logits in K simplex
         logits_pred = self.softmax(logits_pred)
-        mus_pred = self.sigmoid(mus_pred.reshape(*mus_pred.shape[:-1], self.model_config.num_components, -1))
-        sigmas_pred = torch.exp(sigmas_pred.reshape(*sigmas_pred.shape[:-1], self.model_config.num_components, -1))
+        
+        # means in [0, 1]
+        mus_pred = torch.sigmoid(mus_pred.reshape(*mus_pred.shape[:-1], self.model_config.num_components, -1))
+
+        # diagonal sigmas in [0, 1]
+        sigmas_x = torch.sigmoid(sigmas_x)
+        sigmas_y = torch.sigmoid(sigmas_y)
+
+        # covariance sigmas centered around 0
+        sigmas_xy = torch.tanh(sigmas_xy)
+
+        # pen in 3 simplex
         pen_pred = self.softmax(pen_pred)
 
-        return logits_pred, mus_pred, sigmas_pred, pen_pred
+        return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred
     
