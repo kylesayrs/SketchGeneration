@@ -1,3 +1,5 @@
+from typing import Union
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -24,5 +26,8 @@ class TrainingConfig(BaseModel):
     # optimizer
     learning_rate: float = Field(default=1e-4)
 
-    # other
-    wandb_mode: str = Field(default="disabled")
+    # logging
+    wandb_mode: str = Field(default="online")
+    log_frequency: int = Field(default=100)
+
+    save_dir: Union[str, None] = Field(default="checkpoints")

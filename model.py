@@ -70,30 +70,16 @@ class SketchCritic(torch.nn.Module):
         sigmas_y: torch.Tensor,
         sigmas_xy: torch.Tensor,
         pen_pred: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # unpack
         position_true, pen_true = torch.split(xs, [2, 3], dim=2)
 
         # compute separate losses
         position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
-
-        print("-----")
-        print(pen_true[0, 3])
-        print(position_true[0, 3])
-        print("*****")
-        print(pen_pred[0, 3])
-        print(mus_pred[0, 0, 0])
-        print(sigmas_x[0, 3])
-        print(sigmas_y[0, 3])
-        print(sigmas_xy[0, 3])
-        print("-----")
-
-        print(f"position_loss: {position_loss.item()}")
-        print(f"pen_loss: {pen_loss.item()}")
         
         # sum losses
-        return position_loss + pen_loss
+        return position_loss, pen_loss
 
 
 class SketchDecoder(torch.nn.Module):
