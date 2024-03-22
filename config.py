@@ -5,7 +5,7 @@ class ModelConfig(BaseModel):
     hidden_size: int = Field(default=128)
     num_layers: int = Field(default=3)
     dropout: float = Field(default=0.3)
-    num_components: int = Field(default=10)
+    num_components: int = Field(default=1)
     bidirectional: bool = Field(default=False)
 
     @model_validator(mode="after")

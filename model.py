@@ -47,7 +47,7 @@ class SketchCritic(torch.nn.Module):
         position_prev[:, 0] = torch.tensor([0, 0])
         relative_positions_true = position_true - position_prev
 
-        return -1 * mixture_model.log_prob(relative_positions_true).sum()
+        return -1 * mixture_model.log_prob(relative_positions_true).mean()
 
 
     def _get_pen_loss(
@@ -58,7 +58,7 @@ class SketchCritic(torch.nn.Module):
         return self.cross_entropy(
             pen_true.reshape(-1, pen_true.shape[-1]),
             pen_pred.reshape(-1, pen_pred.shape[-1])
-        ).sum()
+        ).mean()
         
 
     def forward(
@@ -75,18 +75,20 @@ class SketchCritic(torch.nn.Module):
         position_true, pen_true = torch.split(xs, [2, 3], dim=2)
 
         # compute separate losses
-        #position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
 
-        #print(position_true[0, 0])
+        print(pen_pred[0, 0])
         print(mus_pred[0, 0, 0])
+        print(sigmas_x[0, 0])
+        print(sigmas_y[0, 0])
+        print(sigmas_xy[0, 0])
 
-        #print(f"position_loss: {position_loss.item()}")
+        print(f"position_loss: {position_loss.item()}")
         print(f"pen_loss: {pen_loss.item()}")
         
         # sum losses
-        return pen_loss
-        #return position_loss + pen_loss
+        return position_loss + pen_loss
 
 
 class SketchDecoder(torch.nn.Module):
@@ -119,30 +121,19 @@ class SketchDecoder(torch.nn.Module):
 
 
     @cached_property
-    def _split_args(self, ) -> List[Tuple[int, int]]:
+    def _split_args(self) -> List[Tuple[int, int]]:
         return [
             self.model_config.num_components,
             2 * self.model_config.num_components,
             self.model_config.num_components,
             self.model_config.num_components,
             self.model_config.num_components,
-            3,
-            0
-            #self.output_size - 6 * self.model_config.num_components - 3,
+            3
         ]
+    
 
-
-    def forward(self, xs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        ys, _hidden_state = self.gru(xs)
-
-        ys = self.linear_0(ys)
-        ys = self.relu(ys)
-        ys = self.linear_1(ys)
-
-        # TODO: experiment with adding a linear layer here
-
-        # unpack outputs
-        logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred, _ = torch.split(ys, self._split_args, dim=2)
+    def _unpack_outputs(self, ys: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred = torch.split(ys, self._split_args, dim=2)
 
         # logits in K simplex
         logits_pred = self.softmax(logits_pred)
@@ -161,4 +152,16 @@ class SketchDecoder(torch.nn.Module):
         pen_pred = self.softmax(pen_pred)
 
         return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred
+
+
+    def forward(self, xs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        # RNN layer
+        ys, _hidden_state = self.gru(xs)
+
+        # linear layer
+        ys = self.linear_0(ys)
+        ys = self.relu(ys)
+        ys = self.linear_1(ys)
+
+        return self._unpack_outputs(ys)
     
