@@ -31,8 +31,8 @@ def train():
     drawings = torch.tensor(drawings, dtype=torch.float32)
 
     # TESTING
-    drawings *= 0
-    drawings[:, :, 3] = 1
+    #drawings *= 0
+    #drawings[:, :, 3] = 1
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 

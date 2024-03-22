@@ -78,11 +78,16 @@ class SketchCritic(torch.nn.Module):
         position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
 
-        print(pen_pred[0, 0])
+        print("-----")
+        print(pen_true[0, 3])
+        print(position_true[0, 3])
+        print("*****")
+        print(pen_pred[0, 3])
         print(mus_pred[0, 0, 0])
-        print(sigmas_x[0, 0])
-        print(sigmas_y[0, 0])
-        print(sigmas_xy[0, 0])
+        print(sigmas_x[0, 3])
+        print(sigmas_y[0, 3])
+        print(sigmas_xy[0, 3])
+        print("-----")
 
         print(f"position_loss: {position_loss.item()}")
         print(f"pen_loss: {pen_loss.item()}")
@@ -138,14 +143,14 @@ class SketchDecoder(torch.nn.Module):
         # logits in K simplex
         logits_pred = self.softmax(logits_pred)
         
-        # means in [0, 1]
-        mus_pred = torch.sigmoid(mus_pred.reshape(*mus_pred.shape[:-1], self.model_config.num_components, -1))
+        # means in [-1, 1]
+        mus_pred = torch.tanh(mus_pred.reshape(*mus_pred.shape[:-1], self.model_config.num_components, -1))
 
         # diagonal sigmas in [0, 1]
         sigmas_x = torch.sigmoid(sigmas_x)
         sigmas_y = torch.sigmoid(sigmas_y)
 
-        # covariance sigmas centered around 0
+        # covariance sigmas in [-1, 1]
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen in 3 simplex
@@ -159,8 +164,8 @@ class SketchDecoder(torch.nn.Module):
         ys, _hidden_state = self.gru(xs)
 
         # linear layer
-        ys = self.linear_0(ys)
-        ys = self.relu(ys)
+        #ys = self.linear_0(ys)
+        #ys = self.relu(ys)
         ys = self.linear_1(ys)
 
         return self._unpack_outputs(ys)

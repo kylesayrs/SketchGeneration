@@ -22,7 +22,7 @@ class TrainingConfig(BaseModel):
     data_sparsity: int = Field(default=10)
 
     # optimizer
-    learning_rate: float = Field(default=1e-1)
+    learning_rate: float = Field(default=1e-4)
 
     # other
     wandb_mode: str = Field(default="disabled")
