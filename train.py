@@ -1,16 +1,18 @@
 import torch
 import wandb
-import numpy
 
 from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
 
+from config import TrainingConfig, ModelConfig
 from data import load_drawings, pad_drawings
-from config import TrainingConfig
+from model import SketchCritic, SketchDecoder
 
 
 def train():
     # set up configuration
     config = TrainingConfig()
+    model_config = ModelConfig()
 
     wandb.init(
         project="SketchGeneration",
@@ -24,51 +26,41 @@ def train():
     print(config)
 
     # load data
-    drawings = load_drawings("data/flip flops.ndjson")
+    drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
-    drawings = torch.tensor(drawings)
+    drawings = torch.tensor(drawings, dtype=torch.float32)
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
-
-    """
     # split data
-    train_drawings, test_drawings = split_data(drawings, test_ratio=0.2)
+    train_drawings, test_drawings = train_test_split(drawings, train_size=0.8)
 
     # create datasets
-    train_dataloader = DataLoader(train_drawings, batch_size=64, shuffle=True)
-    test_dataloader = DataLoader(test_drawings, batch_size=64, shuffle=True)
+    train_dataloader = DataLoader(train_drawings, batch_size=config.batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_drawings, batch_size=config.batch_size, shuffle=True)
 
     # model and optimizer
-    decoder = SketchDecoder(config.model_config)
-    optimizer = 
-    criterion = SketchCriterion()
-
+    decoder = SketchDecoder(model_config)
+    optimizer = torch.optim.Adam(decoder.parameters(), lr=config.learning_rate)
+    criterion = SketchCritic()
 
     for epoch_index in range(config.num_epochs):
-        for batch_index, xs in enumerate(train_dataset):
-            hidden_states = torch.zeros(config.hidden_size)
-            prev_xs = torch.zeros(xs.shape[0], xs.shape[2])
-
-            for sequence_index in range(max_sequence_length):
-                next_xs = xs[:, sequence_index]
+        for batch_index, samples in enumerate(train_dataloader):
+            print(f"samples: {samples.shape}")
             
-                # forward
-                optimizer.zero_grad()
-                logits_pred, mus_pred, sigmas_pred, pen_pred = decoder(prev_xs, h_initials, next_xs)
-                
-                # compute loss
-                loss = criterion(next_xs, logits_pred, mus_pred, sigmas_pred, pen_pred)
-                
-                # backwards
-                loss.backwards()
-                optimizer.step()
+            # forward
+            optimizer.zero_grad()
+            logits_pred, mus_pred, sigmas_pred, pen_pred = decoder(samples)
+            exit(0)
 
-                # move to next sample
-                prev_xs = next_xs
-                
-            
-    """
+            # compute loss
+            loss = criterion(samples, logits_pred, mus_pred, sigmas_pred, pen_pred)
 
+            # backwards
+            loss.backwards()
+            optimizer.step()
+
+            exit(0)
+    
 
 if __name__ == "__main__":
     train()

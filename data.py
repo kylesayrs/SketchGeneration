@@ -4,7 +4,7 @@ import json
 import tqdm
 
 
-def load_drawings(file_path: str, max_len: int = 100, sparsity: int = 1) -> List[List[int]]:
+def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
     drawings = []
 
     with open(file_path, "r") as file:
