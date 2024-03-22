@@ -29,6 +29,10 @@ def train():
     drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
+
+    # TESTING
+    drawings[:, :, :2] *= 0
+
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
     # split data
@@ -44,22 +48,18 @@ def train():
     criterion = SketchCritic()
 
     for epoch_index in range(config.num_epochs):
-        for batch_index, samples in enumerate(train_dataloader):
-            print(f"samples: {samples.shape}")
-            
+        for batch_index, samples in enumerate(train_dataloader):            
             # forward
             optimizer.zero_grad()
             logits_pred, mus_pred, sigmas_pred, pen_pred = decoder(samples)
 
             # compute loss
             loss = criterion(samples, logits_pred, mus_pred, sigmas_pred, pen_pred)
-            exit(0)
+            print(f"loss: {loss.item()}")
 
             # backwards
-            loss.backwards()
+            loss.backward()
             optimizer.step()
-
-            exit(0)
     
 
 if __name__ == "__main__":

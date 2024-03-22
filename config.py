@@ -5,7 +5,7 @@ class ModelConfig(BaseModel):
     hidden_size: int = Field(default=128)
     num_layers: int = Field(default=1)
     dropout: float = Field(default=0.3)
-    num_components: int = Field(default=1)
+    num_components: int = Field(default=10)
     bidirectional: bool = Field(default=False)
 
     @model_validator(mode="after")
@@ -22,7 +22,7 @@ class TrainingConfig(BaseModel):
     data_sparsity: int = Field(default=10)
 
     # optimizer
-    learning_rate: float = Field(default=1e-3)
+    learning_rate: float = Field(default=1e-1)
 
     # other
     wandb_mode: str = Field(default="disabled")
