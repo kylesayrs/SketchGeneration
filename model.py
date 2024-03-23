@@ -33,6 +33,7 @@ class SketchCritic(torch.nn.Module):
 
         # compute true delta x and delta y
         # note: since first is [0, 0], last is [0, 0] after roll (good)
+        # TODO: however, the last in the sequence in negated
         positions_next = torch.roll(positions_true, -1, dims=1)
         relative_positions_true = positions_next - positions_true
 
@@ -41,6 +42,8 @@ class SketchCritic(torch.nn.Module):
         print(mus[0, 10])
 
         # mean negative log likelihood
+        # original paper uses sum
+        # then divided by max sequence length
         loss = -1 * mixture_model.log_prob(relative_positions_true).mean()
 
         return loss
@@ -51,6 +54,8 @@ class SketchCritic(torch.nn.Module):
         pen_true: torch.Tensor,
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
+        # original paper uses sum of negative log loss here
+        # then divided by max sequence length
         return self.cross_entropy(
             pen_pred.reshape((-1, 3)), pen_true.reshape((-1, 3))
         )
