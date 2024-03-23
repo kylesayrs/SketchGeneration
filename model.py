@@ -16,7 +16,10 @@ class SketchCritic(torch.nn.Module):
         super().__init__()
 
         self.sigma_min = sigma_min
-        self.pen_critic = torch.nn.NLLLoss(reduction="mean") #torch.nn.CrossEntropyLoss()
+        self.pen_critic = torch.nn.NLLLoss(
+            weight=torch.tensor([1.0, 2.0, 1.0]),
+            reduction="mean"
+        ) #torch.nn.CrossEntropyLoss()
 
 
     def _get_positions_loss(
@@ -43,9 +46,7 @@ class SketchCritic(torch.nn.Module):
         # mean negative log likelihood
         # original paper uses sum
         # then divided by max sequence length
-        loss = -1 * mixture_model.log_prob(deltas_true).mean()
-
-        return loss
+        return -1 * mixture_model.log_prob(deltas_true).mean()
 
 
     def _get_pen_loss(
@@ -56,8 +57,8 @@ class SketchCritic(torch.nn.Module):
         # original paper uses sum of negative log loss here
         # then divided by max sequence length
         return self.pen_critic(
-            pen_pred.reshape((-1, 3)),
-            torch.argmax(pen_true.reshape((-1, 3)), dim=1)
+            pen_pred.flatten(0, 1),
+            torch.argmax(pen_true.flatten(0, 1), dim=1)
         )
     
 
@@ -95,11 +96,22 @@ class SketchCritic(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # unpack
         positions_true, pen_true = torch.split(xs, [2, 3], dim=2)
+
+        # pen roll back to get what should be predicted
+        # position rolling happens in _get_positions_loss
+        # TODO: come back and simplify this
+        pen_true = torch.roll(pen_true, -1, dims=1)
+        pen_true[:, -1] = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32)
         is_end = pen_true[:, :, 2] == 1
 
         # compute separate losses
         position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
+
+        print(pen_true[0])
+        print(pen_pred[0])
+        #print(torch.argmax(pen_true.reshape((-1, 3)), dim=1))
+        print(pen_loss)
         
         # sum losses
         return position_loss, pen_loss
@@ -112,7 +124,7 @@ class SketchDecoder(torch.nn.Module):
         self.model_config = model_config
     
         input_size = 5
-        self.gru = torch.nn.GRU(
+        self.rnn = torch.nn.LSTM(
             input_size,
             model_config.hidden_size,
             model_config.num_layers,
@@ -170,15 +182,18 @@ class SketchDecoder(torch.nn.Module):
         self,
         xs: torch.Tensor,
         h_0: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+            torch.Tensor
+        ]:
         # RNN layer
-        ys, hidden_state = self.gru(xs, h_0)
+        ys, final_hidden_state = self.rnn(xs, h_0)
 
         # linear layer
-        ys = self.linear_0(ys)
-        ys = self.relu(ys)
+        #ys = self.linear_0(ys)
+        #ys = self.relu(ys)
         # TODO: experiment with layernorm here
         ys = self.linear_1(ys)
 
-        return self._unpack_outputs(ys), hidden_state
+        return self._unpack_outputs(ys), final_hidden_state
     

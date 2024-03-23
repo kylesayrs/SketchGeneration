@@ -28,9 +28,9 @@ def train():
     print(config)
 
     # load data
-    drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
-    drawings = pad_drawings(drawings, config.max_sequence_length)
-    drawings = torch.tensor(drawings, dtype=torch.float32)
+    #drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
+    #drawings = pad_drawings(drawings, config.max_sequence_length)
+    #drawings = torch.tensor(drawings, dtype=torch.float32)
 
     # TESTING
     #drawings[:, :, 0] = 0
@@ -40,7 +40,7 @@ def train():
     #drawings[:, :, 4] = 1
 
     # TESTING
-    """
+    #"""
     drawings = torch.tensor([
         [0.0, 0.0, 1, 0, 0],
         [0.1, 0.0, 1, 0, 0],
@@ -55,8 +55,9 @@ def train():
         [0.1, 0.4, 1, 0, 0],
         [0.0, 0.5, 0, 1, 0],
         [0.0, 0.0, 0, 0, 1],
+        [0.0, 0.0, 0, 0, 1],
     ], dtype=torch.float32).repeat(200_000, 1, 1)
-    """
+    #"""
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
@@ -94,7 +95,7 @@ def train():
 
             # compute loss
             position_loss, pen_loss = criterion(samples, *outputs)
-            loss = position_loss + pen_loss
+            loss = pen_loss# + position_loss
 
             # upload log
             position_losses.append(position_loss.item())
@@ -108,7 +109,7 @@ def train():
             # optimize with gradient clipping
             with torch.no_grad():
                 max_magnitude = max(max_magnitude, max(p.abs().max() for p in decoder.parameters()))
-            torch.nn.utils.clip_grad_norm_(decoder.parameters(), max_norm=config.gradient_clip)
+            #torch.nn.utils.clip_grad_norm_(decoder.parameters(), max_norm=config.gradient_clip)
             optimizer.step()
 
             # test and log
