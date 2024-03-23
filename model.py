@@ -16,7 +16,7 @@ class SketchCritic(torch.nn.Module):
         super().__init__()
 
         self.sigma_min = sigma_min
-        self.pen_critic = torch.nn.NLLLoss() #torch.nn.CrossEntropyLoss()
+        self.pen_critic = torch.nn.NLLLoss(reduction="mean") #torch.nn.CrossEntropyLoss()
 
 
     def _get_positions_loss(
@@ -54,11 +54,15 @@ class SketchCritic(torch.nn.Module):
         # then divided by max sequence length
         print(pen_true.reshape((-1, 3)))
         print(pen_pred.reshape((-1, 3)))
-        print(torch.argmax(pen_true.reshape((-1, 3)), dim=1))
+        print(self.pen_critic(
+            pen_pred.reshape((-1, 3)),
+            torch.argmax(pen_true.reshape((-1, 3)), dim=1)
+        ))
         print("_------")
 
         return self.pen_critic(
-            pen_pred.reshape((-1, 3)), torch.argmax(pen_true.reshape((-1, 3)), dim=1)
+            pen_pred.reshape((-1, 3)),
+            torch.argmax(pen_true.reshape((-1, 3)), dim=1)
         )
     
 

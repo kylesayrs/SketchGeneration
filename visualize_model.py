@@ -216,6 +216,9 @@ if __name__ == "__main__":
 
         pred = torch.concatenate((next_delta, pen_pred), dim=2)
         sketch.add_pred(pred[0, 0].numpy())
-        state = torch.concatenate((torch.tensor([[sketch.pen_position]], dtype=torch.float32), pen_pred), dim=2)
+        state = torch.concatenate((  # don't @ me
+            torch.tensor(numpy.array([[sketch.pen_position]]), dtype=torch.float32),
+            pen_pred
+        ), dim=2)
 
     sketch.plot()
