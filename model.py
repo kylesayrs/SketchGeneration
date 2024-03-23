@@ -154,13 +154,12 @@ class SketchDecoder(torch.nn.Module):
         logits_pred = self.softmax(logits_pred)
         
         # means in [-1, 1]
-        mus_pred = torch.tanh(mus_pred.reshape(*mus_pred.shape[:-1], self.model_config.num_components, -1))
+        mus_pred = mus_pred.reshape(*mus_pred.shape[:-1], self.model_config.num_components, -1)
 
-        # diagonal sigmas in [0, 1]
-        sigmas_x = torch.sigmoid(sigmas_x)
-        sigmas_y = torch.sigmoid(sigmas_y)
-
+        # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
+        sigmas_x = torch.exp(sigmas_x)
+        sigmas_y = torch.exp(sigmas_y)
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen in 3 simplex
