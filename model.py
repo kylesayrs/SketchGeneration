@@ -52,14 +52,6 @@ class SketchCritic(torch.nn.Module):
     ) -> torch.Tensor:
         # original paper uses sum of negative log loss here
         # then divided by max sequence length
-        print(pen_true.reshape((-1, 3)))
-        print(pen_pred.reshape((-1, 3)))
-        print(self.pen_critic(
-            pen_pred.reshape((-1, 3)),
-            torch.argmax(pen_true.reshape((-1, 3)), dim=1)
-        ))
-        print("_------")
-
         return self.pen_critic(
             pen_pred.reshape((-1, 3)),
             torch.argmax(pen_true.reshape((-1, 3)), dim=1)
