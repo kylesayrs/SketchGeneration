@@ -160,7 +160,8 @@ if __name__ == "__main__":
         next_position = mixture_model.sample((1, ))[0]
         
         if numpy.argmax(pen_pred.numpy()) == 2:
-            break
+            print("want to end")
+            #break
 
         state = torch.concatenate((next_position, pen_pred), dim=2)
         sketch.add_state(state[0, 0].numpy())

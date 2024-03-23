@@ -12,9 +12,10 @@ from config import ModelConfig
 
 
 class SketchCritic(torch.nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, sigma_min: float = 1e-2) -> None:
         super().__init__()
 
+        self.sigma_min = sigma_min
         self.cross_entropy = torch.nn.CrossEntropyLoss()
 
 
@@ -45,8 +46,8 @@ class SketchCritic(torch.nn.Module):
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
         return self.cross_entropy(
-            pen_true.reshape(-1, pen_true.shape[-1]),
-            pen_pred.reshape(-1, pen_pred.shape[-1])
+            pen_pred.reshape(-1, pen_pred.shape[-1]),
+            pen_true.reshape(-1, pen_true.shape[-1])
         ).mean()
     
 
@@ -60,9 +61,9 @@ class SketchCritic(torch.nn.Module):
     ) -> torch.nn.Module:
         # convert to scale lower triangle
         scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
-        scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=1e-6)
-        scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=1e-6)
-        scale_tril[:, :, :, 1, 0] = sigmas_xy
+        scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=self.sigma_min)
+        scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=self.sigma_min)
+        scale_tril[:, :, :, 1, 0] = torch.clamp(sigmas_xy, min=-abs(self.sigma_min), max=abs(self.sigma_min))
 
         # GMM
         mixture = Categorical(logits=logits)
@@ -95,7 +96,6 @@ class SketchCritic(torch.nn.Module):
 
 class SketchDecoder(torch.nn.Module):
     def __init__(self, model_config: ModelConfig):
-        print(model_config)
         super().__init__()
 
         self.model_config = model_config
@@ -105,8 +105,8 @@ class SketchDecoder(torch.nn.Module):
             input_size,
             model_config.hidden_size,
             model_config.num_layers,
-            bidirectional=model_config.bidirectional,
             dropout=model_config.dropout,
+            bidirectional=False,
             batch_first=True
         )
 
@@ -165,8 +165,8 @@ class SketchDecoder(torch.nn.Module):
         ys, hidden_state = self.gru(xs, h_0)
 
         # linear layer
-        #ys = self.linear_0(ys)
-        #ys = self.relu(ys)
+        ys = self.linear_0(ys)
+        ys = self.relu(ys)
         ys = self.linear_1(ys)
 
         return self._unpack_outputs(ys), hidden_state

@@ -22,7 +22,7 @@ def train():
         name=None,
         reinit=False,
         mode=config.wandb_mode,
-        config=config.model_dump()
+        config=config.model_dump().update(model_config.model_dump())
     )
     print(f"Run id: {wandb.run.id}")
     print(config)
@@ -33,8 +33,11 @@ def train():
     drawings = torch.tensor(drawings, dtype=torch.float32)
 
     # TESTING
-    #drawings *= 0
-    #drawings[:, :, 3] = 1
+    #drawings[:, :, 0] = 0
+    #drawings[:, :, 1] = 0
+    #drawings[:, :, 2] = 0
+    #drawings[:, :, 3] = 0
+    #drawings[:, :, 4] = 1
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
@@ -42,13 +45,13 @@ def train():
     train_drawings, test_drawings = train_test_split(drawings, train_size=0.8)
 
     # create datasets
-    train_dataloader = DataLoader(train_drawings, batch_size=config.batch_size, shuffle=True)
-    test_dataloader = DataLoader(test_drawings, batch_size=config.batch_size, shuffle=True)
+    train_dataloader = DataLoader(train_drawings, batch_size=config.batch_size, shuffle=True, drop_last=True)
+    test_dataloader = DataLoader(test_drawings, batch_size=config.batch_size, shuffle=True, drop_last=True)
 
     # model and optimizer
     decoder = SketchDecoder(model_config)
     optimizer = torch.optim.Adam(decoder.parameters(), lr=config.learning_rate)
-    criterion = SketchCritic()
+    criterion = SketchCritic(sigma_min=model_config.sigma_min)
 
     # cache save dir
     save_dir = (
