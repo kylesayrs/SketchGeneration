@@ -17,11 +17,12 @@ class SketchCritic(torch.nn.Module):
 
         self.sigma_min = sigma_min
         self.cross_entropy = torch.nn.CrossEntropyLoss()
+        self.has_been_below_0 = False
 
 
     def _get_position_loss(
         self,
-        position_true: torch.Tensor,
+        positions_true: torch.Tensor,
         logits: torch.Tensor,
         mus: torch.Tensor,
         sigmas_x: torch.Tensor,
@@ -32,12 +33,24 @@ class SketchCritic(torch.nn.Module):
         mixture_model = self.make_mixture_model(logits, mus, sigmas_x, sigmas_y, sigmas_xy)
 
         # compute true delta x and delta y
-        position_prev = torch.roll(position_true, 1, dims=1)
-        position_prev[:, 0] = torch.tensor([0, 0])
-        relative_positions_true = position_true - position_prev
+        # note: since first is [0, 0], last is [0, 0] after roll (good)
+        positions_next = torch.roll(positions_true, -1, dims=1)
+        relative_positions_true = positions_next - positions_true
 
         # mean negative log likelihood
-        return -1 * mixture_model.log_prob(relative_positions_true).mean()
+        loss = -1 * mixture_model.log_prob(relative_positions_true).mean()
+        if loss > 0:
+            if self.has_been_below_0:
+                print("chonko")
+                print(positions_true[0])
+                print(relative_positions_true[0])
+                print(mixture_model.log_prob(relative_positions_true)[0])
+                exit(0)
+
+        else:
+            self.has_been_below_0 = True
+
+        return loss
 
 
     def _get_pen_loss(
@@ -84,10 +97,10 @@ class SketchCritic(torch.nn.Module):
         pen_pred: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # unpack
-        position_true, pen_true = torch.split(xs, [2, 3], dim=2)
+        positions_true, pen_true = torch.split(xs, [2, 3], dim=2)
 
         # compute separate losses
-        position_loss = self._get_position_loss(position_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = self._get_position_loss(positions_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses
