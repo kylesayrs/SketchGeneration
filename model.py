@@ -32,14 +32,10 @@ class SketchCritic(torch.nn.Module):
         mixture_model = self.make_mixture_model(logits, mus, sigmas_x, sigmas_y, sigmas_xy)
 
         # compute true delta x and delta y
-        # note: since first is [0, 0], after roll last is [0, 0] (good)
-        # TODO: check that last in sequence is correct
+        # note original paper discards all the final zeros
+        # we could do this by computing a mask and then masking the loss
         positions_next = torch.roll(positions_true, -1, dims=1)
         deltas_true = positions_next - positions_true
-
-        print(deltas_true[0])
-        print(logits[0])
-        print(mus[0])
 
         # mean negative log likelihood
         # original paper uses sum
@@ -56,6 +52,11 @@ class SketchCritic(torch.nn.Module):
     ) -> torch.Tensor:
         # original paper uses sum of negative log loss here
         # then divided by max sequence length
+        print(pen_true.reshape((-1, 3)))
+        print(pen_pred.reshape((-1, 3)))
+        print(torch.argmax(pen_true.reshape((-1, 3)), dim=1))
+        print("_------")
+
         return self.pen_critic(
             pen_pred.reshape((-1, 3)), torch.argmax(pen_true.reshape((-1, 3)), dim=1)
         )

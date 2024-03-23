@@ -93,14 +93,12 @@ class Sketch:
         self.done = False
 
 
-    def add_state(self, state: numpy.ndarray):
+    def add_pred(self, state: numpy.ndarray):
         self.pen_position = numpy.clip(
             self.pen_position + [state[0] * 255, state[1] * 255],
             0.0, 255.0
         )
         arg_max = numpy.argmax(state[2:])
-        print(f"self.pen_position: {self.pen_position}")
-        print(f"arg_max: {arg_max}")
 
         if self.done:
             return
@@ -187,9 +185,9 @@ if __name__ == "__main__":
     #exit(0)
 
     sketch = Sketch()
-    for state in drawing[:75]:
-        print(state)
-        sketch.add_state(numpy.array(state))
+    for pred in drawing[:75]:
+        print(pred)
+        sketch.add_pred(numpy.array(pred))
 
     sketch.plot()
     exit(0)
@@ -207,17 +205,17 @@ if __name__ == "__main__":
         position_pred = output[:-1]
         pen_pred = output[-1]
 
-        # generate position
-        mixture_model = criterion.make_mixture_model(*position_pred)
-        next_difference = mixture_model.sample((1, ))[0]
-        next_position = numpy.clip(state[0, 0, :2] + next_difference, 0.0, 1.0)
-
-        
+        # check for end
         if numpy.argmax(pen_pred.numpy()) == 2:
             print("want to end")
             #break
 
-        state = torch.concatenate((next_position, pen_pred), dim=2)
-        sketch.add_state(state[0, 0].numpy())
+        # generate delta
+        mixture_model = criterion.make_mixture_model(*position_pred)
+        next_delta = mixture_model.sample((1, ))[0]
+
+        pred = torch.concatenate((next_delta, pen_pred), dim=2)
+        sketch.add_pred(pred[0, 0].numpy())
+        state = torch.concatenate((torch.tensor([[sketch.pen_position]], dtype=torch.float32), pen_pred), dim=2)
 
     sketch.plot()
