@@ -15,12 +15,9 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
             if not entry["recognized"]:
                 continue
                 
-            drawing = []
+            drawing = [[0, 0, 1, 0, 0]]  # first state is always the same
             for stroke_index, (stroke_xs, stroke_ys) in enumerate(entry["drawing"]):
                 positions = list(zip(stroke_xs, stroke_ys))
-
-                # first movement is always the same
-                drawing.append([0, 0, 1, 0, 0])
 
                 # do normal movement
                 for x, y in positions[:-1]:
@@ -31,7 +28,7 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
                 drawing.append([last_x / 255, last_y / 255, 0, 1, 0])
 
             # end drawing
-            drawing.append([0, 0, 0, 1, 0])
+            drawing.append([0, 0, 0, 0, 1])
             drawings.append(drawing)
 
     return drawings

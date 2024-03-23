@@ -22,7 +22,7 @@ class TrainingConfig(BaseModel):
     learning_rate: float = Field(default=5e-6)
 
     # logging
-    wandb_mode: str = Field(default="online")
+    wandb_mode: str = Field(default="disabled")
     log_frequency: int = Field(default=100)
 
     save_parent_dir: Union[str, None] = Field(default="checkpoints")

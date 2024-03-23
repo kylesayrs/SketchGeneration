@@ -17,7 +17,6 @@ class SketchCritic(torch.nn.Module):
 
         self.sigma_min = sigma_min
         self.cross_entropy = torch.nn.CrossEntropyLoss()
-        self.has_been_below_0 = False
 
 
     def _get_position_loss(
@@ -37,18 +36,12 @@ class SketchCritic(torch.nn.Module):
         positions_next = torch.roll(positions_true, -1, dims=1)
         relative_positions_true = positions_next - positions_true
 
+        print(relative_positions_true[0, 10])
+        print(logits[0, 10])
+        print(mus[0, 10])
+
         # mean negative log likelihood
         loss = -1 * mixture_model.log_prob(relative_positions_true).mean()
-        if loss > 0:
-            if self.has_been_below_0:
-                print("chonko")
-                print(positions_true[0])
-                print(relative_positions_true[0])
-                print(mixture_model.log_prob(relative_positions_true)[0])
-                #exit(0)
-
-        else:
-            self.has_been_below_0 = True
 
         return loss
 
@@ -178,6 +171,7 @@ class SketchDecoder(torch.nn.Module):
         # linear layer
         ys = self.linear_0(ys)
         ys = self.relu(ys)
+        # TODO: experiment with layernorm here
         ys = self.linear_1(ys)
 
         return self._unpack_outputs(ys), hidden_state

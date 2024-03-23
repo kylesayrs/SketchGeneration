@@ -5,6 +5,7 @@ import argparse
 import matplotlib.pyplot as plt
 
 from config import ModelConfig, TrainingConfig
+from data import load_drawings, pad_drawings
 from model import SketchCritic, SketchDecoder
 
 
@@ -65,7 +66,8 @@ def strokes_to_raster(
 
 
 class Sketch:
-    def __init__(self):
+    def __init__(self, relative_state: bool):
+        self.relative_state = relative_state
         self.side = 256.0
 
         line_diameter = 16
@@ -93,9 +95,12 @@ class Sketch:
 
 
     def add_state(self, state: numpy.ndarray):
-        print("SDF")
-        print(self.pen_position)
-        self.pen_position = numpy.clip(self.pen_position + state[:2] * 255, 0.0, 255.0)
+        state_scaled = state[:2] * 255
+        if self.relative_state:
+            self.pen_position = numpy.clip(self.pen_position + state_scaled, 0.0, 255.0)
+        else:
+            self.pen_position = state_scaled
+
         arg_max = numpy.argmax(state[2:])
 
         if self.done:
@@ -110,16 +115,17 @@ class Sketch:
                 self.ctx.line_to(*self.pen_position)
 
         if arg_max == 1:
+            self.ctx.line_to(*self.pen_position)
             self.ctx.stroke()
             self.pen_down = False
 
         if arg_max == 2:
+            self.ctx.line_to(*self.pen_position)
+            self.ctx.stroke()
             self.done = True
 
 
     def plot(self):
-        self.ctx.stroke()
-
         data = self.surface.get_data()
         raster_image = numpy.copy(numpy.asarray(data, dtype=numpy.float32)[::4])
         raster_image = raster_image / 255.0
@@ -143,10 +149,24 @@ if __name__ == "__main__":
     # use criterion for making gmm
     criterion = SketchCritic()
 
+    """
     # TODO: feed in first stroke from existing data
+    drawings = load_drawings("data/flip flops.ndjson", sparsity=1_000)
+    drawings = pad_drawings(drawings, config.max_sequence_length)
+
+    drawing = drawings[42]
+
+    sketch = Sketch(False)
+    for state in drawing[1:75]:
+        print(state)
+        sketch.add_state(numpy.array(state))
+
+    sketch.plot()
+    exit(0)
+    """
 
     # generate predictions
-    sketch = Sketch()
+    sketch = Sketch(True)
     state = torch.tensor([[[0, 0, 1, 0, 0]]], dtype=torch.float32)
     for index in range(15):
         # infer next movement
@@ -159,7 +179,11 @@ if __name__ == "__main__":
 
         # generate position
         mixture_model = criterion.make_mixture_model(*position_pred)
-        next_position = mixture_model.sample((1, ))[0]
+        next_difference = mixture_model.sample((1, ))[0]
+        print(next_difference)
+        next_position = numpy.clip(state[0, 0, :2] + next_difference, 0.0, 1.0)
+        print(next_position)
+
         
         if numpy.argmax(pen_pred.numpy()) == 2:
             print("want to end")
