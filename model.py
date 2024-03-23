@@ -45,7 +45,7 @@ class SketchCritic(torch.nn.Module):
                 print(positions_true[0])
                 print(relative_positions_true[0])
                 print(mixture_model.log_prob(relative_positions_true)[0])
-                exit(0)
+                #exit(0)
 
         else:
             self.has_been_below_0 = True
@@ -58,11 +58,6 @@ class SketchCritic(torch.nn.Module):
         pen_true: torch.Tensor,
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
-        print(pen_pred.reshape((-1, 3)))
-        print(pen_true.reshape((-1, 3)))
-        print(self.cross_entropy(
-            pen_pred.reshape((-1, 3)), pen_true.reshape((-1, 3))
-        ))
         return self.cross_entropy(
             pen_pred.reshape((-1, 3)), pen_true.reshape((-1, 3))
         )

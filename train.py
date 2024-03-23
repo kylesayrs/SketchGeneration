@@ -73,8 +73,7 @@ def train():
 
             # compute loss
             position_loss, pen_loss = criterion(samples, *outputs)
-            #loss = position_loss + pen_loss
-            loss = pen_loss
+            loss = position_loss + pen_loss
             position_losses.append(position_loss.item())
             pen_losses.append(pen_loss.item())
             losses.append(loss.item())

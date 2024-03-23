@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, model_validator
 class ModelConfig(BaseModel):
     hidden_size: int = Field(default=128)
     num_layers: int = Field(default=3)
-    dropout: float = Field(default=0.1)
-    num_components: int = Field(default=3)
+    dropout: float = Field(default=0.05)
+    num_components: int = Field(default=5)
     sigma_min: float = Field(default=1e-3)
 
 
@@ -22,7 +22,7 @@ class TrainingConfig(BaseModel):
     learning_rate: float = Field(default=1e-5)
 
     # logging
-    wandb_mode: str = Field(default="disabled")
+    wandb_mode: str = Field(default="online")
     log_frequency: int = Field(default=100)
 
     save_parent_dir: Union[str, None] = Field(default="checkpoints")
