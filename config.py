@@ -30,4 +30,4 @@ class TrainingConfig(BaseModel):
     wandb_mode: str = Field(default="online")
     log_frequency: int = Field(default=100)
 
-    save_dir: Union[str, None] = Field(default="checkpoints")
+    save_parent_dir: Union[str, None] = Field(default="checkpoints")

@@ -19,6 +19,9 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
             for stroke_index, (stroke_xs, stroke_ys) in enumerate(entry["drawing"]):
                 positions = list(zip(stroke_xs, stroke_ys))
 
+                # first movement is always the same
+                drawing.append([0, 0, 1, 0, 0])
+
                 # do normal movement
                 for x, y in positions[:-1]:
                     drawing.append([x / 255, y / 255, 1, 0, 0])

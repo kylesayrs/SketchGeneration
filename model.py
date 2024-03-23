@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import torch
 from torch.distributions import (
@@ -6,15 +6,9 @@ from torch.distributions import (
     MultivariateNormal,
     MixtureSameFamily
 )
-from functools import cache, cached_property
+from functools import cached_property
 
 from config import ModelConfig
-
-"""position_loss = self.position_critic(position_true, logits_pred, mus_pred, sigmas_pred)
-    pen_loss = self.pen_critic(pen_true, pen_pred)
-
-:return: _description_
-"""
 
 
 class SketchCritic(torch.nn.Module):
@@ -33,20 +27,15 @@ class SketchCritic(torch.nn.Module):
         sigmas_y: torch.Tensor,
         sigmas_xy: torch.Tensor
     ) -> torch.Tensor:
-        # convert to scale lower triangle
-        scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
-        scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=1e-6)
-        scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=1e-6)
-        scale_tril[:, :, :, 1, 0] = sigmas_xy
+        # create mixture model
+        mixture_model = self.make_mixture_model(logits, mus, sigmas_x, sigmas_y, sigmas_xy)
 
-        mixture = Categorical(logits=logits)
-        components = MultivariateNormal(mus, scale_tril=scale_tril)
-        mixture_model = MixtureSameFamily(mixture, components)
-
+        # compute true delta x and delta y
         position_prev = torch.roll(position_true, 1, dims=1)
         position_prev[:, 0] = torch.tensor([0, 0])
         relative_positions_true = position_true - position_prev
 
+        # mean negative log likelihood
         return -1 * mixture_model.log_prob(relative_positions_true).mean()
 
 
@@ -59,6 +48,28 @@ class SketchCritic(torch.nn.Module):
             pen_true.reshape(-1, pen_true.shape[-1]),
             pen_pred.reshape(-1, pen_pred.shape[-1])
         ).mean()
+    
+
+    def make_mixture_model(
+        self,
+        logits: torch.Tensor,
+        mus: torch.Tensor,
+        sigmas_x: torch.Tensor,
+        sigmas_y: torch.Tensor,
+        sigmas_xy: torch.Tensor
+    ) -> torch.nn.Module:
+        # convert to scale lower triangle
+        scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
+        scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=1e-6)
+        scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=1e-6)
+        scale_tril[:, :, :, 1, 0] = sigmas_xy
+
+        # GMM
+        mixture = Categorical(logits=logits)
+        components = MultivariateNormal(mus, scale_tril=scale_tril)
+        mixture_model = MixtureSameFamily(mixture, components)
+
+        return mixture_model
         
 
     def forward(
@@ -145,14 +156,18 @@ class SketchDecoder(torch.nn.Module):
         return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred
 
 
-    def forward(self, xs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self,
+        xs: torch.Tensor,
+        h_0: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         # RNN layer
-        ys, _hidden_state = self.gru(xs)
+        ys, hidden_state = self.gru(xs, h_0)
 
         # linear layer
         #ys = self.linear_0(ys)
         #ys = self.relu(ys)
         ys = self.linear_1(ys)
 
-        return self._unpack_outputs(ys)
+        return self._unpack_outputs(ys), hidden_state
     

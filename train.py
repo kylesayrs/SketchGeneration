@@ -50,6 +50,14 @@ def train():
     optimizer = torch.optim.Adam(decoder.parameters(), lr=config.learning_rate)
     criterion = SketchCritic()
 
+    # cache save dir
+    save_dir = (
+        os.path.join(config.save_parent_dir, wandb.run.id)
+        if config.save_parent_dir is not None
+        else None
+    )
+
+    # begin training
     position_losses = []
     pen_losses = []
     losses = []
@@ -58,10 +66,10 @@ def train():
             # forward
             decoder.train()
             optimizer.zero_grad()
-            logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred = decoder(samples)
+            outputs, _ = decoder(samples)
 
             # compute loss
-            position_loss, pen_loss = criterion(samples, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred)
+            position_loss, pen_loss = criterion(samples, *outputs)
             loss = position_loss + pen_loss
             position_losses.append(position_loss.item())
             pen_losses.append(pen_loss.item())
@@ -77,7 +85,7 @@ def train():
                     test_samples = next(iter(test_dataloader))
 
                     decoder.eval()
-                    test_outputs = decoder(test_samples)
+                    test_outputs, _ = decoder(test_samples)
                     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
                     
                 # compute metrics and reset
@@ -94,18 +102,16 @@ def train():
                 losses = []
 
                 # log metrics
-                print(f"[{epoch_index: 04d}, {batch_index: 04d}]: {json.dumps(metrics, indent=4)}")
+                print(f"[{epoch_index:04d}, {batch_index:04d}]: {json.dumps(metrics, indent=4)}")
                 wandb.log(metrics)
 
-                if config.save_dir is not None:
-                    os.makedirs(config.save_dir, exist_ok=True)
+                if config.save_parent_dir is not None:
+                    os.makedirs(save_dir, exist_ok=True)
 
                     # save model
-                    file_name = f"{wandb.run.id}_{epoch_index: 04d}_{batch_index: 04d}.pth"
-                    torch.save(decoder.state_dict(), os.path.join(config.save_dir, file_name))
+                    file_name = f"{epoch_index:04d}_{batch_index:04d}.pth"
+                    torch.save(decoder.state_dict(), os.path.join(save_dir, file_name))
 
-        
-    
 
 if __name__ == "__main__":
     train()
