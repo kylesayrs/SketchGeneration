@@ -98,7 +98,7 @@ class Sketch:
             self.pen_position + [state[0] * 255, state[1] * 255],
             0.0, 255.0
         )
-        arg_max = numpy.argmax(state[2:])
+        arg_max = 0#numpy.argmax(state[2:])
 
         if self.done:
             return
@@ -132,6 +132,14 @@ class Sketch:
 
         plt.imshow(raster_image * 255)
         plt.show()
+
+
+def batch_seq_to_one_hot(batch_seq_tensor):
+    batch_size, seq_length, num_classes = batch_seq_tensor.size()
+    max_indices = torch.argmax(batch_seq_tensor, dim=2)
+    one_hot = torch.zeros(batch_size, seq_length, num_classes)
+    one_hot[torch.arange(batch_size).unsqueeze(1), torch.arange(seq_length).unsqueeze(0), max_indices] = 1.0
+    return one_hot
 
 
 if __name__ == "__main__":
@@ -196,14 +204,20 @@ if __name__ == "__main__":
     # generate predictions
     sketch = Sketch()
     state = torch.tensor([[[0, 0, 1, 0, 0]]], dtype=torch.float32)
-    for index in range(75):
+    hidden_state = torch.zeros((3, 1, model_config.hidden_size), dtype=torch.float32)
+    for index in range(100):
         # infer next movement
         with torch.no_grad():
-            output, hidden_state = decoder(state)
+            print(state)
+            output, hidden_state = decoder(state, hidden_state)
         
         # unpack output
-        position_pred = output[:-1]
+        delta_pred = output[:-1]
         pen_pred = output[-1]
+        print(f"pen_pred: {pen_pred}")
+        pen_pred = torch.tensor([[[1, 0, 0]]], dtype=torch.float32)#batch_seq_to_one_hot(pen_pred)
+        print(f"pen_pred: {pen_pred}")
+        #exit(0)
 
         # check for end
         if numpy.argmax(pen_pred.numpy()) == 2:
@@ -211,13 +225,14 @@ if __name__ == "__main__":
             #break
 
         # generate delta
-        mixture_model = criterion.make_mixture_model(*position_pred)
+        mixture_model = criterion.make_mixture_model(*delta_pred)
         next_delta = mixture_model.sample((1, ))[0]
+        print(f"next_delta: {next_delta}")
 
         pred = torch.concatenate((next_delta, pen_pred), dim=2)
         sketch.add_pred(pred[0, 0].numpy())
         state = torch.concatenate((  # don't @ me
-            torch.tensor(numpy.array([[sketch.pen_position]]), dtype=torch.float32),
+            torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32),
             pen_pred
         ), dim=2)
 

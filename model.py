@@ -22,6 +22,7 @@ class SketchCritic(torch.nn.Module):
     def _get_positions_loss(
         self,
         positions_true: torch.Tensor,
+        is_end: torch.Tensor,
         logits: torch.Tensor,
         mus: torch.Tensor,
         sigmas_x: torch.Tensor,
@@ -32,10 +33,12 @@ class SketchCritic(torch.nn.Module):
         mixture_model = self.make_mixture_model(logits, mus, sigmas_x, sigmas_y, sigmas_xy)
 
         # compute true delta x and delta y
-        # note original paper discards all the final zeros
-        # we could do this by computing a mask and then masking the loss
         positions_next = torch.roll(positions_true, -1, dims=1)
         deltas_true = positions_next - positions_true
+
+        deltas_true[is_end] = 0.0  # by forcing all the positions at the
+                                   # end to be zero, they will always be
+                                   # correct and :. not contribute loss
 
         # mean negative log likelihood
         # original paper uses sum
@@ -70,7 +73,7 @@ class SketchCritic(torch.nn.Module):
         scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
         scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=self.sigma_min)
         scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=self.sigma_min)
-        #scale_tril[:, :, :, 1, 0] = torch.clamp(sigmas_xy, min=-abs(self.sigma_min), max=abs(self.sigma_min))
+        scale_tril[:, :, :, 1, 0] = sigmas_xy
 
         # GMM
         mixture = Categorical(logits=logits)
@@ -92,9 +95,10 @@ class SketchCritic(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # unpack
         positions_true, pen_true = torch.split(xs, [2, 3], dim=2)
+        is_end = pen_true[:, :, 2] == 1
 
         # compute separate losses
-        position_loss = self._get_positions_loss(positions_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses
