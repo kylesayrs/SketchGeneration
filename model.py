@@ -16,10 +16,10 @@ class SketchCritic(torch.nn.Module):
         super().__init__()
 
         self.sigma_min = sigma_min
-        self.cross_entropy = torch.nn.CrossEntropyLoss()
+        self.pen_critic = torch.nn.NLLLoss() #torch.nn.CrossEntropyLoss()
 
 
-    def _get_position_loss(
+    def _get_positions_loss(
         self,
         positions_true: torch.Tensor,
         logits: torch.Tensor,
@@ -32,19 +32,19 @@ class SketchCritic(torch.nn.Module):
         mixture_model = self.make_mixture_model(logits, mus, sigmas_x, sigmas_y, sigmas_xy)
 
         # compute true delta x and delta y
-        # note: since first is [0, 0], last is [0, 0] after roll (good)
-        # TODO: however, the last in the sequence in negated
+        # note: since first is [0, 0], after roll last is [0, 0] (good)
+        # TODO: check that last in sequence is correct
         positions_next = torch.roll(positions_true, -1, dims=1)
-        relative_positions_true = positions_next - positions_true
+        deltas_true = positions_next - positions_true
 
-        print(relative_positions_true[0, 10])
-        print(logits[0, 10])
-        print(mus[0, 10])
+        print(deltas_true[0])
+        print(logits[0])
+        print(mus[0])
 
         # mean negative log likelihood
         # original paper uses sum
         # then divided by max sequence length
-        loss = -1 * mixture_model.log_prob(relative_positions_true).mean()
+        loss = -1 * mixture_model.log_prob(deltas_true).mean()
 
         return loss
 
@@ -56,8 +56,8 @@ class SketchCritic(torch.nn.Module):
     ) -> torch.Tensor:
         # original paper uses sum of negative log loss here
         # then divided by max sequence length
-        return self.cross_entropy(
-            pen_pred.reshape((-1, 3)), pen_true.reshape((-1, 3))
+        return self.pen_critic(
+            pen_pred.reshape((-1, 3)), torch.argmax(pen_true.reshape((-1, 3)), dim=1)
         )
     
 
@@ -73,7 +73,7 @@ class SketchCritic(torch.nn.Module):
         scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
         scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=self.sigma_min)
         scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=self.sigma_min)
-        scale_tril[:, :, :, 1, 0] = torch.clamp(sigmas_xy, min=-abs(self.sigma_min), max=abs(self.sigma_min))
+        #scale_tril[:, :, :, 1, 0] = torch.clamp(sigmas_xy, min=-abs(self.sigma_min), max=abs(self.sigma_min))
 
         # GMM
         mixture = Categorical(logits=logits)
@@ -97,7 +97,7 @@ class SketchCritic(torch.nn.Module):
         positions_true, pen_true = torch.split(xs, [2, 3], dim=2)
 
         # compute separate losses
-        position_loss = self._get_position_loss(positions_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = self._get_positions_loss(positions_true, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses

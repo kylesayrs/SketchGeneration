@@ -28,9 +28,9 @@ def train():
     print(config)
 
     # load data
-    drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
-    drawings = pad_drawings(drawings, config.max_sequence_length)
-    drawings = torch.tensor(drawings, dtype=torch.float32)
+    #drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
+    #drawings = pad_drawings(drawings, config.max_sequence_length)
+    #drawings = torch.tensor(drawings, dtype=torch.float32)
 
     # TESTING
     #drawings[:, :, 0] = 0
@@ -38,6 +38,25 @@ def train():
     #drawings[:, :, 2] = 0
     #drawings[:, :, 3] = 0
     #drawings[:, :, 4] = 1
+
+    # TESTING
+    drawings = torch.tensor([
+        [0.0, 0.0, 1, 0, 0],
+        [0.1, 0.0, 1, 0, 0],
+        [0.2, 0.0, 1, 0, 0],
+        [0.3, 0.0, 1, 0, 0],
+        [0.4, 0.0, 1, 0, 0],
+        [0.5, 0.0, 1, 0, 0],
+        [0.5, 0.0, 0, 1, 0],
+        [0.4, 0.1, 1, 0, 0],
+        [0.3, 0.2, 1, 0, 0],
+        [0.2, 0.3, 1, 0, 0],
+        [0.1, 0.4, 1, 0, 0],
+        [0.0, 0.5, 0, 1, 0],
+        [0.0, 0.0, 0, 0, 1],
+    ], dtype=torch.float32).repeat(200_000, 1, 1)
+    #print(drawings)
+    #exit(0)
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
@@ -73,7 +92,9 @@ def train():
 
             # compute loss
             position_loss, pen_loss = criterion(samples, *outputs)
-            loss = position_loss + 100 * pen_loss
+            loss = position_loss + pen_loss
+
+            # upload log
             position_losses.append(position_loss.item())
             pen_losses.append(pen_loss.item())
             losses.append(loss.item())

@@ -15,17 +15,21 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
             if not entry["recognized"]:
                 continue
                 
-            drawing = [[0, 0, 1, 0, 0]]  # first state is always the same
+            drawing = [[0, 0, 0, 1, 0]]  # start with pen lifted
             for stroke_index, (stroke_xs, stroke_ys) in enumerate(entry["drawing"]):
                 positions = list(zip(stroke_xs, stroke_ys))
 
                 # do normal movement
-                for x, y in positions[:-1]:
-                    drawing.append([x / 255, y / 255, 1, 0, 0])
+                for x, y in positions:
+                    drawing.append([
+                        x / 255,
+                        y / 255,
+                        1, 0, 0
+                    ])
 
-                # end stroke
-                last_x, last_y = positions[-1]
-                drawing.append([last_x / 255, last_y / 255, 0, 1, 0])
+                # modify end stroke
+                drawing[-1][3] = 0
+                drawing[-1][4] = 1
 
             # end drawing
             drawing.append([0, 0, 0, 0, 1])

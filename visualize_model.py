@@ -66,8 +66,7 @@ def strokes_to_raster(
 
 
 class Sketch:
-    def __init__(self, relative_state: bool):
-        self.relative_state = relative_state
+    def __init__(self):
         self.side = 256.0
 
         line_diameter = 16
@@ -89,19 +88,19 @@ class Sketch:
         self.ctx.paint()
         self.ctx.set_source_rgb(1.0, 1.0, 1.0)
 
-        self.pen_down = False
+        self.pen_down = True
         self.pen_position = numpy.array([0.0, 0.0])
         self.done = False
 
 
     def add_state(self, state: numpy.ndarray):
-        state_scaled = state[:2] * 255
-        if self.relative_state:
-            self.pen_position = numpy.clip(self.pen_position + state_scaled, 0.0, 255.0)
-        else:
-            self.pen_position = state_scaled
-
+        self.pen_position = numpy.clip(
+            self.pen_position + [state[0] * 255, state[1] * 255],
+            0.0, 255.0
+        )
         arg_max = numpy.argmax(state[2:])
+        print(f"self.pen_position: {self.pen_position}")
+        print(f"arg_max: {arg_max}")
 
         if self.done:
             return
@@ -120,12 +119,14 @@ class Sketch:
             self.pen_down = False
 
         if arg_max == 2:
-            self.ctx.line_to(*self.pen_position)
-            self.ctx.stroke()
             self.done = True
 
 
     def plot(self):
+        if not self.done:
+            self.ctx.line_to(*self.pen_position)
+            self.ctx.stroke()
+
         data = self.surface.get_data()
         raster_image = numpy.copy(numpy.asarray(data, dtype=numpy.float32)[::4])
         raster_image = raster_image / 255.0
@@ -151,13 +152,42 @@ if __name__ == "__main__":
 
     """
     # TODO: feed in first stroke from existing data
-    drawings = load_drawings("data/flip flops.ndjson", sparsity=1_000)
-    drawings = pad_drawings(drawings, config.max_sequence_length)
+    #drawings = load_drawings("data/flip flops.ndjson", sparsity=1_000)
+    #drawings = pad_drawings(drawings, config.max_sequence_length)
+    #drawing = drawings[10]
 
-    drawing = drawings[42]
+    if True:
+        drawing = torch.tensor([
+            [0.0, 0.0, 1, 0, 0],
+            [0.1, 0.0, 1, 0, 0],
+            [0.2, 0.0, 1, 0, 0],
+            [0.3, 0.0, 1, 0, 0],
+            [0.4, 0.0, 1, 0, 0],
+            [0.5, 0.0, 1, 0, 0],
+            [0.5, 0.0, 0, 1, 0],
+            [0.4, 0.1, 1, 0, 0],
+            [0.3, 0.2, 1, 0, 0],
+            [0.2, 0.3, 1, 0, 0],
+            [0.1, 0.4, 1, 0, 0],
+            [0.0, 0.5, 0, 1, 0],
+            [0.0, 0.0, 0, 0, 1],
+        ], dtype=torch.float32)
 
-    sketch = Sketch(False)
-    for state in drawing[1:75]:
+    positions = drawing[:, :2]
+    positions_next = torch.roll(positions, -1, dims=0)
+    deltas = positions_next - positions
+
+    pen_states = drawing[:, 2:]
+    pen_states_next = torch.roll(pen_states, -1, dims=0)
+    pen_states_next[-1] = torch.tensor([0, 0, 1])
+
+    drawing[:, :2] = deltas
+    drawing[:, 2:] = pen_states_next
+    print(drawing)
+    #exit(0)
+
+    sketch = Sketch()
+    for state in drawing[:75]:
         print(state)
         sketch.add_state(numpy.array(state))
 
@@ -166,9 +196,9 @@ if __name__ == "__main__":
     """
 
     # generate predictions
-    sketch = Sketch(True)
+    sketch = Sketch()
     state = torch.tensor([[[0, 0, 1, 0, 0]]], dtype=torch.float32)
-    for index in range(15):
+    for index in range(75):
         # infer next movement
         with torch.no_grad():
             output, hidden_state = decoder(state)
@@ -180,9 +210,7 @@ if __name__ == "__main__":
         # generate position
         mixture_model = criterion.make_mixture_model(*position_pred)
         next_difference = mixture_model.sample((1, ))[0]
-        print(next_difference)
         next_position = numpy.clip(state[0, 0, :2] + next_difference, 0.0, 1.0)
-        print(next_position)
 
         
         if numpy.argmax(pen_pred.numpy()) == 2:
@@ -191,6 +219,5 @@ if __name__ == "__main__":
 
         state = torch.concatenate((next_position, pen_pred), dim=2)
         sketch.add_state(state[0, 0].numpy())
-        print(state)
 
     sketch.plot()
