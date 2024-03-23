@@ -93,7 +93,9 @@ class Sketch:
 
 
     def add_state(self, state: numpy.ndarray):
-        self.pen_position += numpy.clip(state[:2] * 255, 0.0, 255.0)
+        print("SDF")
+        print(self.pen_position)
+        self.pen_position = numpy.clip(self.pen_position + state[:2] * 255, 0.0, 255.0)
         arg_max = numpy.argmax(state[2:])
 
         if self.done:
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     # generate predictions
     sketch = Sketch()
     state = torch.tensor([[[0, 0, 1, 0, 0]]], dtype=torch.float32)
-    for index in range(config.max_sequence_length):
+    for index in range(15):
         # infer next movement
         with torch.no_grad():
             output, hidden_state = decoder(state)

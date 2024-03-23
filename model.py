@@ -58,10 +58,14 @@ class SketchCritic(torch.nn.Module):
         pen_true: torch.Tensor,
         pen_pred: torch.Tensor
     ) -> torch.Tensor:
+        print(pen_pred.reshape((-1, 3)))
+        print(pen_true.reshape((-1, 3)))
+        print(self.cross_entropy(
+            pen_pred.reshape((-1, 3)), pen_true.reshape((-1, 3))
+        ))
         return self.cross_entropy(
-            pen_pred.reshape(-1, pen_pred.shape[-1]),
-            pen_true.reshape(-1, pen_true.shape[-1])
-        ).mean()
+            pen_pred.reshape((-1, 3)), pen_true.reshape((-1, 3))
+        )
     
 
     def make_mixture_model(
