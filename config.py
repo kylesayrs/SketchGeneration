@@ -8,7 +8,7 @@ class ModelConfig(BaseModel):
     num_layers: int = Field(default=3)
     dropout: float = Field(default=0.05)
     num_components: int = Field(default=5)
-    sigma_min: float = Field(default=1e-3)
+    sigma_min: float = Field(default=1e-6)
 
 
 class TrainingConfig(BaseModel):
@@ -19,7 +19,7 @@ class TrainingConfig(BaseModel):
     data_sparsity: int = Field(default=1)
 
     # optimizer
-    learning_rate: float = Field(default=1e-5)
+    learning_rate: float = Field(default=5e-6)
 
     # logging
     wandb_mode: str = Field(default="online")
