@@ -26,17 +26,12 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
                 for x, y in positions[:-1]:
                     drawing.append([x / 255, y / 255, 1, 0, 0])
 
-                # get last position in stroke
+                # end stroke
                 last_x, last_y = positions[-1]
+                drawing.append([last_x / 255, last_y / 255, 0, 1, 0])
 
-                # if this is the last stroke
-                if stroke_index >= len(entry["drawing"]) - 1:
-                    drawing.append([last_x / 255, last_y / 255, 0, 0, 1])
-
-                # if this is not the last stroke
-                else:
-                    drawing.append([last_x / 255, last_y / 255, 0, 1, 0])
-
+            # end drawing
+            drawing.append([0, 0, 0, 1, 0])
             drawings.append(drawing)
 
     return drawings
