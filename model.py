@@ -160,6 +160,8 @@ class SketchDecoder(torch.nn.Module):
             batch_first=True
         )
 
+        self.elu = torch.nn.ELU()
+
         self.output_size = 6 * model_config.num_components + 3
 
         self.linear_0 = torch.nn.Linear(model_config.hidden_size, model_config.hidden_size)
@@ -195,8 +197,8 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = torch.exp(sigmas_x)
-        sigmas_y = torch.exp(sigmas_y)
+        sigmas_x = self.elu(sigmas_x) + 1
+        sigmas_y = self.elu(sigmas_y) + 1
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen in 3 simplex
