@@ -108,10 +108,12 @@ class SketchCritic(torch.nn.Module):
         position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
 
-        print(pen_true[0])
-        print(pen_pred[0])
+        #print(positions_true[0, 10])
+        #print(mus_pred[0, 10])
+        #print(pen_true[0])
+        #print(pen_pred[0])
         #print(torch.argmax(pen_true.reshape((-1, 3)), dim=1))
-        print(pen_loss)
+        #print(pen_loss)
         
         # sum losses
         return position_loss, pen_loss
@@ -124,8 +126,33 @@ class SketchDecoder(torch.nn.Module):
         self.model_config = model_config
     
         input_size = 5
-        self.rnn = torch.nn.LSTM(
+        self.rnn = torch.nn.GRU(
             input_size,
+            model_config.hidden_size,
+            model_config.num_layers,
+            dropout=model_config.dropout,
+            bidirectional=False,
+            batch_first=True
+        )
+
+        self.rnn2 = torch.nn.GRU(
+            model_config.hidden_size,
+            model_config.hidden_size,
+            model_config.num_layers,
+            dropout=model_config.dropout,
+            bidirectional=False,
+            batch_first=True
+        )
+        self.rnn3 = torch.nn.GRU(
+            model_config.hidden_size,
+            model_config.hidden_size,
+            model_config.num_layers,
+            dropout=model_config.dropout,
+            bidirectional=False,
+            batch_first=True
+        )
+        self.rnn4 = torch.nn.GRU(
+            model_config.hidden_size,
             model_config.hidden_size,
             model_config.num_layers,
             dropout=model_config.dropout,
@@ -187,13 +214,22 @@ class SketchDecoder(torch.nn.Module):
             torch.Tensor
         ]:
         # RNN layer
-        ys, final_hidden_state = self.rnn(xs, h_0)
+        ys, h_n = self.rnn(xs, h_0)
+        h_n = self.relu(h_n)
+        ys = self.relu(ys)
+        ys, h_n = self.rnn2(ys, h_n)
+        ys = self.relu(ys)
+        h_n = self.relu(h_n)
+        #ys, h_n = self.rnn3(ys, h_n)
+        #ys = self.relu(ys)
+        #h_n = self.relu(h_n)
+        #ys, h_n = self.rnn4(ys, h_n)
 
         # linear layer
-        #ys = self.linear_0(ys)
-        #ys = self.relu(ys)
+        ys = self.linear_0(ys)
+        ys = self.relu(ys)
         # TODO: experiment with layernorm here
         ys = self.linear_1(ys)
 
-        return self._unpack_outputs(ys), final_hidden_state
+        return self._unpack_outputs(ys), h_n
     

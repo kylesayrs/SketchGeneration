@@ -28,8 +28,8 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
                     ])
 
                 # modify end stroke
-                drawing[-1][3] = 0
-                drawing[-1][4] = 1
+                drawing[-1][2] = 0
+                drawing[-1][3] = 1
 
             # end drawing
             drawing.append([0, 0, 0, 0, 1])
