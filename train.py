@@ -85,13 +85,14 @@ def train():
     pen_losses = []
     losses = []
     max_magnitude = 0
-    total_batch_index = 0
+    total_num_samples = 0
     for epoch_index in range(config.num_epochs):
         for batch_index, samples in enumerate(train_dataloader):            
             # forward
             decoder.train()
             optimizer.zero_grad()
             outputs, _ = decoder(samples)
+            total_num_samples += len(samples)
 
             # compute loss
             position_loss, pen_loss = criterion(samples, *outputs)
@@ -101,7 +102,6 @@ def train():
             position_losses.append(position_loss.item())
             pen_losses.append(pen_loss.item())
             losses.append(loss.item())
-            total_batch_index += 1
 
             # backwards
             loss.backward()
@@ -123,7 +123,7 @@ def train():
                     
                 # compute metrics and reset
                 metrics = {
-                    "total_batch_index": total_batch_index,
+                    "total_num_samples": total_num_samples,
                     "train_position_loss": sum(position_losses) / len(position_losses),
                     "train_pen_loss": sum(pen_losses) / len(pen_losses),
                     "train_loss": sum(losses) / len(losses),

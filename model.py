@@ -161,6 +161,8 @@ class SketchDecoder(torch.nn.Module):
         )
 
         self.elu = torch.nn.ELU()
+        self.dropout = torch.nn.Dropout(p=model_config.dropout)
+        self.layer_norm = torch.nn.LayerNorm(model_config.hidden_size)
 
         self.output_size = 6 * model_config.num_components + 3
 
@@ -217,14 +219,17 @@ class SketchDecoder(torch.nn.Module):
         ]:
         # RNN layer
         ys, h_n = self.rnn(xs, h_0)
-        h_n = self.relu(h_n)
-        ys = self.relu(ys)
+        ys = self.layer_norm(self.relu(self.dropout(ys)))
+        h_n = self.layer_norm(self.relu(self.dropout(h_n)))
+
         ys, h_n = self.rnn2(ys, h_n)
-        ys = self.relu(ys)
-        h_n = self.relu(h_n)
+        h_n = self.layer_norm(self.relu(self.dropout(ys)))
+        ys = self.layer_norm(self.relu(self.dropout(h_n)))
+        
         #ys, h_n = self.rnn3(ys, h_n)
         #ys = self.relu(ys)
         #h_n = self.relu(h_n)
+        
         #ys, h_n = self.rnn4(ys, h_n)
 
         # linear layer
