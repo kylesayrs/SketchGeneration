@@ -32,6 +32,8 @@ def train():
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
 
+    # TODO: create dataset and add data augmentation
+
     # TESTING
     #drawings[:, :, 0] = 0
     #drawings[:, :, 1] = 0

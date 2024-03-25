@@ -16,7 +16,7 @@ def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
                 continue
                 
             drawing = [[0, 0, 0, 1, 0]]  # start with pen lifted
-            for stroke_index, (stroke_xs, stroke_ys) in enumerate(entry["drawing"]):
+            for _stroke_index, (stroke_xs, stroke_ys) in enumerate(entry["drawing"]):
                 positions = list(zip(stroke_xs, stroke_ys))
 
                 # do normal movement

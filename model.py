@@ -81,6 +81,10 @@ class SketchCritic(torch.nn.Module):
         components = MultivariateNormal(mus, scale_tril=scale_tril)
         mixture_model = MixtureSameFamily(mixture, components)
 
+        #print(logits[0])
+        #print(mus[0, 0])
+        #print(scale_tril[0, 0])
+
         return mixture_model
         
 

@@ -20,7 +20,7 @@ class TrainingConfig(BaseModel):
 
     # optimizer
     learning_rate: float = Field(default=1e-5)
-    gradient_clip: float = Field(default=0.20)
+    gradient_clip: float = Field(default=1.20)
 
     # logging
     wandb_mode: str = Field(default="online")
