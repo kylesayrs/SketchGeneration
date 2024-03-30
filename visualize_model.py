@@ -204,7 +204,7 @@ if __name__ == "__main__":
     # generate predictions
     sketch = Sketch()
     state = torch.tensor([[[0, 0, 0, 1, 0]]], dtype=torch.float32)
-    for index in range(10):
+    for index in range(100):
         # infer next movement
         with torch.no_grad():
             print(state)
@@ -214,8 +214,12 @@ if __name__ == "__main__":
         delta_pred = output[:-1]
         pen_pred = output[-1]
         print(f"pen_pred: {pen_pred}")
-        pen_pred = torch.tensor([[[1, 0, 0]]], dtype=torch.float32)#batch_seq_to_one_hot(pen_pred)
+        #pen_pred = torch.tensor([[[1, 0, 0]]], dtype=torch.float32)
+        pen_pred = batch_seq_to_one_hot(pen_pred)
         print(f"pen_pred: {pen_pred}")
+
+        if pen_pred[0, 0, 2] == 1.0:
+            break
         #exit(0)
 
         # check for end

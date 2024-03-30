@@ -28,7 +28,7 @@ def train():
     print(config)
 
     # load data
-    drawings = load_drawings("data/flip flops.ndjson", config.data_sparsity)
+    drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
 

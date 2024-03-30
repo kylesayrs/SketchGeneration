@@ -1,5 +1,6 @@
 from typing import List, Tuple, Optional
 
+import math
 import torch
 from torch.distributions import (
     Categorical,
@@ -9,6 +10,34 @@ from torch.distributions import (
 from functools import cached_property
 
 from config import ModelConfig
+
+
+class PositionalEncoding(torch.nn.Module):
+    """
+    Batch-first variant of torch's Positional Encoding
+    """
+
+    def __init__(self, embed_dims: int, dropout: float, max_len: int):
+        super().__init__()
+        self.dropout = torch.nn.Dropout(p=dropout)
+
+        positions = torch.arange(max_len).unsqueeze(1)
+        division_term = torch.exp(torch.arange(0, embed_dims, 2) * (-math.log(10000.0) / embed_dims))
+        positions = positions * division_term
+
+        positional_encoding = torch.zeros(1, max_len, embed_dims)
+        positional_encoding[0, :, 0::2] = torch.sin(positions)
+        positional_encoding[0, :, 1::2] = torch.cos(positions)
+        self.register_buffer("positional_encoding", positional_encoding)
+
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.positional_encoding[:, :x.size(0)]
+        return self.dropout(x)
 
 
 class SketchCritic(torch.nn.Module):
@@ -131,16 +160,17 @@ class SketchDecoder(torch.nn.Module):
     
         input_size = 5
         self.tokenizer = torch.nn.Linear(input_size, model_config.embed_dims)
+        self.positional_encoder = PositionalEncoding(model_config.embed_dims, dropout=model_config.dropout, max_len=model_config.max_sequence_length)
 
         decoder_layer = torch.nn.TransformerDecoderLayer(
             d_model=model_config.embed_dims,
-            nhead=1,
+            nhead=model_config.num_heads,
             dim_feedforward=model_config.hidden_dims,
             dropout=model_config.dropout,
             activation=torch.nn.functional.relu,
             dtype=torch.float32
         )
-        self.decoder = torch.nn.TransformerDecoder(decoder_layer, 1)
+        self.decoder = torch.nn.TransformerDecoder(decoder_layer, model_config.num_layers)
 
         self.output_size = 6 * model_config.num_components + 3
         self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size)
@@ -188,6 +218,7 @@ class SketchDecoder(torch.nn.Module):
     def forward(self, xs: torch.Tensor) -> Tuple[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]]:
         # tokenizer
         xs = self.tokenizer(xs)
+        xs = self.positional_encoder(xs)
 
         # decoder
         xs = self.decoder(xs, torch.zeros(xs.shape, dtype=torch.float32))
