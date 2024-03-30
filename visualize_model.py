@@ -1,8 +1,10 @@
+from sklearn.model_selection import train_test_split
 import torch
 import numpy
 import cairo
 import argparse
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 
 from config import ModelConfig, TrainingConfig
 from data import load_drawings, pad_drawings
@@ -154,51 +156,28 @@ if __name__ == "__main__":
     decoder.eval()
 
     # use criterion for making gmm
-    criterion = SketchCritic()
+    criterion = SketchCritic(sigma_min=model_config.sigma_min)
 
     """
-    # TODO: feed in first stroke from existing data
-    #drawings = load_drawings("data/flip flops.ndjson", sparsity=1_000)
-    #drawings = pad_drawings(drawings, config.max_sequence_length)
-    #drawing = drawings[10]
-
-    if True:
-        drawing = torch.tensor([
-            [0.0, 0.0, 1, 0, 0],
-            [0.1, 0.0, 1, 0, 0],
-            [0.2, 0.0, 1, 0, 0],
-            [0.3, 0.0, 1, 0, 0],
-            [0.4, 0.0, 1, 0, 0],
-            [0.5, 0.0, 1, 0, 0],
-            [0.5, 0.0, 0, 1, 0],
-            [0.4, 0.1, 1, 0, 0],
-            [0.3, 0.2, 1, 0, 0],
-            [0.2, 0.3, 1, 0, 0],
-            [0.1, 0.4, 1, 0, 0],
-            [0.0, 0.5, 0, 1, 0],
-            [0.0, 0.0, 0, 0, 1],
-        ], dtype=torch.float32)
-
-    positions = drawing[:, :2]
-    positions_next = torch.roll(positions, -1, dims=0)
-    deltas = positions_next - positions
-
-    pen_states = drawing[:, 2:]
-    pen_states_next = torch.roll(pen_states, -1, dims=0)
-    pen_states_next[-1] = torch.tensor([0, 0, 1])
-
-    drawing[:, :2] = deltas
-    drawing[:, 2:] = pen_states_next
-    print(drawing)
-    #exit(0)
-
-    sketch = Sketch()
-    for pred in drawing[:75]:
-        print(pred)
-        sketch.add_pred(numpy.array(pred))
-
-    sketch.plot()
-    exit(0)
+    drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
+    drawings = pad_drawings(drawings, config.max_sequence_length)
+    drawings = torch.tensor(drawings, dtype=torch.float32)
+    train_drawings, test_drawings = train_test_split(drawings, train_size=0.8)
+    train_dataloader = DataLoader(train_drawings, batch_size=1024, shuffle=True, drop_last=True)
+    test_dataloader = DataLoader(test_drawings, batch_size=1024, shuffle=True, drop_last=True)
+    
+    train_samples = next(iter(train_dataloader))
+    test_samples = next(iter(test_dataloader))
+    decoder.eval()
+    with torch.no_grad():
+        train_outputs = decoder(train_samples)
+        test_outputs = decoder(test_samples)
+    train_position_loss, train_pen_loss = criterion(train_samples, *train_outputs)
+    test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
+    print(f"train_position_loss: {train_position_loss}")
+    print(f"train_pen_loss: {train_pen_loss}")
+    print(f"test_position_loss: {test_position_loss}")
+    print(f"test_pen_loss: {test_pen_loss}")
     """
 
     # generate predictions
@@ -220,12 +199,6 @@ if __name__ == "__main__":
 
         if pen_pred[0, 0, 2] == 1.0:
             break
-        #exit(0)
-
-        # check for end
-        if numpy.argmax(pen_pred.numpy()) == 2:
-            print("want to end")
-            #break
 
         # generate delta
         mixture_model = criterion.make_mixture_model(*delta_pred)
