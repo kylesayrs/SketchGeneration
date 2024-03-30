@@ -162,15 +162,19 @@ class SketchDecoder(torch.nn.Module):
         self.tokenizer = torch.nn.Linear(input_size, model_config.embed_dims)
         self.positional_encoder = PositionalEncoding(model_config.embed_dims, dropout=model_config.dropout, max_len=model_config.max_sequence_length)
 
-        decoder_layer = torch.nn.TransformerDecoderLayer(
+        encoder_layer = torch.nn.TransformerEncoderLayer(
             d_model=model_config.embed_dims,
             nhead=model_config.num_heads,
             dim_feedforward=model_config.hidden_dims,
             dropout=model_config.dropout,
             activation=torch.nn.functional.relu,
-            dtype=torch.float32
+            dtype=torch.float32,
+            batch_first=True
         )
-        self.decoder = torch.nn.TransformerDecoder(decoder_layer, model_config.num_layers)
+        self.transformer = torch.nn.TransformerEncoder(
+            encoder_layer,
+            model_config.num_layers
+        )
 
         self.output_size = 6 * model_config.num_components + 3
         self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size)
@@ -221,7 +225,8 @@ class SketchDecoder(torch.nn.Module):
         xs = self.positional_encoder(xs)
 
         # decoder
-        xs = self.decoder(xs, torch.zeros(xs.shape, dtype=torch.float32))
+        mask = torch.nn.Transformer.generate_square_subsequent_mask(xs.shape[1])
+        xs = self.transformer(xs, mask=mask)
 
         # linear layer
         ys = self.linear_0(xs)

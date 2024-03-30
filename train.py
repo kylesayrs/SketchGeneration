@@ -71,8 +71,8 @@ def train():
     test_dataloader = DataLoader(test_drawings, batch_size=config.batch_size, shuffle=True, drop_last=True)
 
     # model and optimizer
-    decoder = SketchDecoder(model_config)
-    optimizer = torch.optim.Adam(decoder.parameters(), lr=config.learning_rate)
+    model = SketchDecoder(model_config)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     criterion = SketchCritic(sigma_min=model_config.sigma_min)
 
     # cache save dir
@@ -91,9 +91,9 @@ def train():
     for epoch_index in range(config.num_epochs):
         for batch_index, samples in enumerate(train_dataloader):            
             # forward
-            decoder.train()
+            model.train()
             optimizer.zero_grad()
-            outputs = decoder(samples)
+            outputs = model(samples)
             total_num_samples += len(samples)
 
             # compute loss
@@ -110,8 +110,8 @@ def train():
 
             # optimize with gradient clipping
             with torch.no_grad():
-                max_magnitude = max(max_magnitude, max(p.abs().max() for p in decoder.parameters()))
-            torch.nn.utils.clip_grad_norm_(decoder.parameters(), max_norm=config.gradient_clip)
+                max_magnitude = max(max_magnitude, max(p.abs().max() for p in model.parameters()))
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.gradient_clip)
             optimizer.step()
 
             # test and log
@@ -119,8 +119,8 @@ def train():
                 with torch.no_grad():
                     test_samples = next(iter(test_dataloader))
 
-                    decoder.eval()
-                    test_outputs = decoder(test_samples)
+                    model.eval()
+                    test_outputs = model(test_samples)
                     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
                     
                 # compute metrics and reset
@@ -148,7 +148,7 @@ def train():
 
                     # save model
                     file_name = f"{epoch_index:04d}_{batch_index:04d}.pth"
-                    torch.save(decoder.state_dict(), os.path.join(save_dir, file_name))
+                    torch.save(model.state_dict(), os.path.join(save_dir, file_name))
 
 
 if __name__ == "__main__":
