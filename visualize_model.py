@@ -204,12 +204,11 @@ if __name__ == "__main__":
     # generate predictions
     sketch = Sketch()
     state = torch.tensor([[[0, 0, 0, 1, 0]]], dtype=torch.float32)
-    hidden_state = torch.zeros((model_config.num_layers, 1, model_config.hidden_size), dtype=torch.float32)
     for index in range(10):
         # infer next movement
         with torch.no_grad():
             print(state)
-            output, hidden_state = decoder(state, hidden_state)
+            output = decoder(state)
         
         # unpack output
         delta_pred = output[:-1]

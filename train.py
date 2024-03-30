@@ -93,7 +93,7 @@ def train():
             # forward
             decoder.train()
             optimizer.zero_grad()
-            outputs, _ = decoder(samples)
+            outputs = decoder(samples)
             total_num_samples += len(samples)
 
             # compute loss
@@ -120,7 +120,7 @@ def train():
                     test_samples = next(iter(test_dataloader))
 
                     decoder.eval()
-                    test_outputs, _ = decoder(test_samples)
+                    test_outputs = decoder(test_samples)
                     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
                     
                 # compute metrics and reset

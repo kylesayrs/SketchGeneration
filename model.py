@@ -130,55 +130,27 @@ class SketchDecoder(torch.nn.Module):
         self.model_config = model_config
     
         input_size = 5
-        self.rnn = torch.nn.GRU(
-            input_size,
-            model_config.hidden_size,
-            model_config.num_layers,
-            dropout=model_config.dropout,
-            bidirectional=False,
-            batch_first=True
-        )
+        self.tokenizer = torch.nn.Linear(input_size, model_config.embed_dims)
 
-        self.rnn2 = torch.nn.GRU(
-            model_config.hidden_size,
-            model_config.hidden_size,
-            model_config.num_layers,
+        decoder_layer = torch.nn.TransformerDecoderLayer(
+            d_model=model_config.embed_dims,
+            nhead=1,
+            dim_feedforward=model_config.hidden_dims,
             dropout=model_config.dropout,
-            bidirectional=False,
-            batch_first=True
+            activation=torch.nn.functional.relu,
+            dtype=torch.float32
         )
-        self.rnn3 = torch.nn.GRU(
-            model_config.hidden_size,
-            model_config.hidden_size,
-            model_config.num_layers,
-            dropout=model_config.dropout,
-            bidirectional=False,
-            batch_first=True
-        )
-        self.rnn4 = torch.nn.GRU(
-            model_config.hidden_size,
-            model_config.hidden_size,
-            model_config.num_layers,
-            dropout=model_config.dropout,
-            bidirectional=False,
-            batch_first=True
-        )
-
-        self.elu = torch.nn.ELU()
-        self.dropout = torch.nn.Dropout(p=model_config.dropout)
-        self.layer_norm = torch.nn.LayerNorm(model_config.hidden_size)
+        self.decoder = torch.nn.TransformerDecoder(decoder_layer, 1)
 
         self.output_size = 6 * model_config.num_components + 3
+        self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size)
 
-        self.linear_0 = torch.nn.Linear(model_config.hidden_size, model_config.hidden_size)
-        self.relu = torch.nn.ReLU()
-        self.linear_1 = torch.nn.Linear(model_config.hidden_size, self.output_size)
-
+        self.elu = torch.nn.ELU()
         self.sigmoid = torch.nn.Sigmoid()
         self.softmax = torch.nn.Softmax(dim=2)
 
         self.to(torch.float32)
-
+    
 
     @cached_property
     def _split_args(self) -> List[Tuple[int, int]]:
@@ -213,34 +185,15 @@ class SketchDecoder(torch.nn.Module):
         return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred
 
 
-    def forward(
-        self,
-        xs: torch.Tensor,
-        h_0: Optional[torch.Tensor] = None
-    ) -> Tuple[
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
-            torch.Tensor
-        ]:
-        # RNN layer
-        ys, h_n = self.rnn(xs, h_0)
-        ys = self.layer_norm(self.relu(self.dropout(ys)))
-        h_n = self.layer_norm(self.relu(self.dropout(h_n)))
+    def forward(self, xs: torch.Tensor) -> Tuple[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]]:
+        # tokenizer
+        xs = self.tokenizer(xs)
 
-        ys, h_n = self.rnn2(ys, h_n)
-        h_n = self.layer_norm(self.relu(self.dropout(ys)))
-        ys = self.layer_norm(self.relu(self.dropout(h_n)))
-        
-        #ys, h_n = self.rnn3(ys, h_n)
-        #ys = self.relu(ys)
-        #h_n = self.relu(h_n)
-        
-        #ys, h_n = self.rnn4(ys, h_n)
+        # decoder
+        xs = self.decoder(xs, torch.zeros(xs.shape, dtype=torch.float32))
 
         # linear layer
-        ys = self.linear_0(ys)
-        ys = self.relu(ys)
-        # TODO: experiment with layernorm here
-        ys = self.linear_1(ys)
+        ys = self.linear_0(xs)
 
-        return self._unpack_outputs(ys), h_n
+        return self._unpack_outputs(ys)
     
