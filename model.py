@@ -46,7 +46,7 @@ class SketchCritic(torch.nn.Module):
 
         self.sigma_min = sigma_min
         self.pen_critic = torch.nn.NLLLoss(
-            weight=torch.tensor([1.0, 2.0, 1.0]),
+            weight=torch.tensor([1.0, 1.0, 1.0]),
             reduction="mean"
         ) #torch.nn.CrossEntropyLoss()
 

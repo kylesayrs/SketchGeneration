@@ -128,7 +128,7 @@ if __name__ == "__main__":
     exit(0)
     """
 
-    #""" draw one
+    """ draw one
     drawings = load_drawings("data/moon.ndjson", 10)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -151,19 +151,24 @@ if __name__ == "__main__":
 
     sketch.plot()
     exit(0)
-    #"""
+    """
 
     # generate predictions
     sketch = Sketch()
     sequence = [[[0, 0, 0, 1, 0]]]
     sequence = torch.tensor(pad_drawings(sequence, config.max_sequence_length), dtype=torch.float32)
     for index in range(99):
+        print("-----")
         # infer next movement
         with torch.no_grad():
             output = model(sequence)  # [output, batch, seq]
         
         # only use output of next token in sequence
         next_output = [element[:, index].unsqueeze(0) for element in output]
+        print(next_output[0])
+        print(next_output[1])
+        print(next_output[2])
+        print(next_output[3])
 
         # unpack output
         delta_pred = next_output[:-1]
