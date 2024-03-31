@@ -70,9 +70,10 @@ class Sketch:
 
 
     def plot(self):
-        if not self.done:
+        if self.pen_down:
             self.ctx.line_to(*self.pen_position)
             self.ctx.stroke()
+            self.ctx.move_to(*self.pen_position)
 
         data = self.surface.get_data()
         raster_image = numpy.copy(numpy.asarray(data, dtype=numpy.float32)[::4])
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     # use criterion for making gmm
     criterion = SketchCritic(sigma_min=model_config.sigma_min)
 
-    """
+    """ compute loss
     drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -143,8 +144,9 @@ if __name__ == "__main__":
 
     deltas_drawing = drawing.clone()
     deltas_drawing[:, :2] = delta_positions
-    for element in deltas_drawing:
-        sketch.add_pred(element)
+    for state in deltas_drawing:
+        print(state)
+        sketch.add_pred(state)
         #sketch.plot()
 
     sketch.plot()
@@ -158,7 +160,7 @@ if __name__ == "__main__":
     for index in range(99):
         # infer next movement
         with torch.no_grad():
-            output = model(sequence)
+            output = model(sequence)  # [output, batch, seq]
         
         # only use output of next token in sequence
         next_output = [element[:, index].unsqueeze(0) for element in output]
@@ -166,32 +168,33 @@ if __name__ == "__main__":
         # unpack output
         delta_pred = next_output[:-1]
         pen_pred = next_output[-1]
-        #pen_pred = batch_seq_to_one_hot(pen_pred)
+
+        # generate pen state
         dist = torch.distributions.categorical.Categorical(probs=pen_pred)
-        print(pen_pred)
-        pen_pred = torch.zeros((1, 1, 3))
-        pen_pred[0, 0, dist.sample()] = 1.0
-        print(f"{pen_pred}")
+        pen_state = torch.zeros((1, 1, 3))
+        pen_state[0, 0, dist.sample()] = 1.0
 
         # generate delta
         mixture_model = criterion.make_mixture_model(*delta_pred)
         next_delta = mixture_model.sample((1, ))[0]
+        print((next_delta, pen_pred))
 
         # pack into next state
-        pred = torch.concatenate((next_delta, pen_pred), dim=2)
+        pred = torch.concatenate((next_delta, pen_state), dim=2)
         sketch.add_pred(pred[0, 0].numpy())
         state = torch.concatenate((  # don't @ me
             torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32),
-            pen_pred
+            pen_state
         ), dim=2)
         print(state)
 
         # add to sequence
         sequence[0, index + 1] = state
-        print(sequence)
+        #print(sequence)
+        sketch.plot()
 
         # stop if requested
-        if pen_pred[0, 0, 2] == 1.0:
+        if pen_state[0, 0, 2] == 1.0:
             break
 
     sketch.plot()
