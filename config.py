@@ -28,7 +28,7 @@ class TrainingConfig(BaseModel):
     gradient_clip: float = Field(default=1.20)
 
     # logging
-    wandb_mode: str = Field(default="disabled")
+    wandb_mode: str = Field(default="online")
     log_frequency: int = Field(default=100)
 
     save_parent_dir: Union[str, None] = Field(default="checkpoints")

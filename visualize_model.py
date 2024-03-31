@@ -151,9 +151,9 @@ if __name__ == "__main__":
     model_config = ModelConfig()
 
     # load model
-    decoder = SketchDecoder(model_config)
-    decoder.load_state_dict(torch.load(args.checkpoint_path))
-    decoder.eval()
+    model = SketchDecoder(model_config)
+    model.load_state_dict(torch.load(args.checkpoint_path))
+    model.eval()
 
     # use criterion for making gmm
     criterion = SketchCritic(sigma_min=model_config.sigma_min)
@@ -182,34 +182,39 @@ if __name__ == "__main__":
 
     # generate predictions
     sketch = Sketch()
-    state = torch.tensor([[[0, 0, 0, 1, 0]]], dtype=torch.float32)
-    for index in range(100):
+    sequence = [[[0, 0, 0, 1, 0]]]
+    sequence = torch.tensor(pad_drawings(sequence, config.max_sequence_length), dtype=torch.float32)
+    for index in range(50):
         # infer next movement
         with torch.no_grad():
-            print(state)
-            output = decoder(state)
+            output = model(sequence)
         
-        # unpack output
-        delta_pred = output[:-1]
-        pen_pred = output[-1]
-        print(f"pen_pred: {pen_pred}")
-        #pen_pred = torch.tensor([[[1, 0, 0]]], dtype=torch.float32)
-        pen_pred = batch_seq_to_one_hot(pen_pred)
-        print(f"pen_pred: {pen_pred}")
+        # only use output of next token in sequence
+        next_output = [element[:, index].unsqueeze(0) for element in output]
 
-        if pen_pred[0, 0, 2] == 1.0:
-            break
+        # unpack output
+        delta_pred = next_output[:-1]
+        pen_pred = next_output[-1]
+        pen_pred = batch_seq_to_one_hot(pen_pred)
 
         # generate delta
         mixture_model = criterion.make_mixture_model(*delta_pred)
         next_delta = mixture_model.sample((1, ))[0]
-        print(f"next_delta: {next_delta}")
 
+        # pack into next state
         pred = torch.concatenate((next_delta, pen_pred), dim=2)
         sketch.add_pred(pred[0, 0].numpy())
         state = torch.concatenate((  # don't @ me
             torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32),
             pen_pred
         ), dim=2)
+        print(state)
+
+        # add to sequence
+        sequence[0, index + 1] = state
+
+        # stop if requested
+        if pen_pred[0, 0, 2] == 1.0:
+            pass#break
 
     sketch.plot()
