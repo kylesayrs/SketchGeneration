@@ -15,58 +15,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("checkpoint_path", type=str)
 
 
-"""
-def strokes_to_raster(
-    strokes: List[List[List[int]]],
-    side: int = 50,
-    line_diameter: int = 16,
-    padding: int = 16
-) -> numpy.ndarray:
-    if len(strokes) <= 0:
-        return numpy.zeros((1, side, side), dtype=numpy.float32)
-
-    original_side = 256.0
-
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, side, side)
-    ctx = cairo.Context(surface)
-    ctx.set_antialias(cairo.ANTIALIAS_BEST)
-    ctx.set_line_cap(cairo.LINE_CAP_ROUND)
-    ctx.set_line_join(cairo.LINE_JOIN_ROUND)
-    ctx.set_line_width(line_diameter)
-
-    # scale to match the new size
-    # add padding at the edges for the line_diameter
-    # and add additional padding to account for antialiasing
-    total_padding = padding * 2.0 + line_diameter
-    new_scale = float(side) / float(original_side + total_padding)
-    ctx.scale(new_scale, new_scale)
-    ctx.translate(total_padding / 2.0, total_padding / 2.0)
-
-    # don't offset to center, not necessary (as of now)
-
-    # clear background
-    ctx.set_source_rgb(0.0, 0.0, 0.0)
-    ctx.paint()
-
-    # draw strokes, this is the most cpu-intensive part
-    ctx.set_source_rgb(1.0, 1.0, 1.0)
-    for stroke in strokes:
-        ctx.move_to(stroke[0][0], stroke[1][0])
-        # skip first because we've already moved to it
-        for i in range(1, len(stroke[0])):
-            ctx.line_to(stroke[0][i], stroke[1][i])
-        ctx.stroke()
-
-    data = surface.get_data()
-    raster_image = numpy.copy(numpy.asarray(data, dtype=numpy.float32)[::4])
-    raster_image = raster_image / 255.0
-    raster_image = raster_image.reshape((side, side))
-    raster_image = numpy.expand_dims(raster_image, axis=0)  # one channel image
-
-    return raster_image
-"""
-
-
 class Sketch:
     def __init__(self):
         self.side = 256.0
@@ -100,7 +48,7 @@ class Sketch:
             self.pen_position + [state[0] * 255, state[1] * 255],
             0.0, 255.0
         )
-        arg_max = 0#numpy.argmax(state[2:])
+        arg_max = numpy.argmax(state[2:])
 
         if self.done:
             return
@@ -114,7 +62,6 @@ class Sketch:
                 self.ctx.line_to(*self.pen_position)
 
         if arg_max == 1:
-            self.ctx.line_to(*self.pen_position)
             self.ctx.stroke()
             self.pen_down = False
 
@@ -168,23 +115,47 @@ if __name__ == "__main__":
     
     train_samples = next(iter(train_dataloader))
     test_samples = next(iter(test_dataloader))
-    decoder.eval()
     with torch.no_grad():
-        train_outputs = decoder(train_samples)
-        test_outputs = decoder(test_samples)
+        train_outputs = model(train_samples)
+        test_outputs = model(test_samples)
     train_position_loss, train_pen_loss = criterion(train_samples, *train_outputs)
     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
     print(f"train_position_loss: {train_position_loss}")
     print(f"train_pen_loss: {train_pen_loss}")
     print(f"test_position_loss: {test_position_loss}")
     print(f"test_pen_loss: {test_pen_loss}")
+    exit(0)
     """
+
+    #""" draw one
+    drawings = load_drawings("data/moon.ndjson", 10)
+    drawings = pad_drawings(drawings, config.max_sequence_length)
+    drawings = torch.tensor(drawings, dtype=torch.float32)
+
+    drawing = drawings[0]
+
+    sketch = Sketch()
+    positions = drawing[:, :2]
+    positions_next = torch.roll(positions, -1, dims=0)
+    delta_positions = positions_next - positions
+
+    delta_positions[drawing[:, 4] == 1.0] = torch.tensor([0.0, 0.0])
+
+    deltas_drawing = drawing.clone()
+    deltas_drawing[:, :2] = delta_positions
+    for element in deltas_drawing:
+        sketch.add_pred(element)
+        #sketch.plot()
+
+    sketch.plot()
+    exit(0)
+    #"""
 
     # generate predictions
     sketch = Sketch()
     sequence = [[[0, 0, 0, 1, 0]]]
     sequence = torch.tensor(pad_drawings(sequence, config.max_sequence_length), dtype=torch.float32)
-    for index in range(50):
+    for index in range(99):
         # infer next movement
         with torch.no_grad():
             output = model(sequence)
@@ -195,7 +166,12 @@ if __name__ == "__main__":
         # unpack output
         delta_pred = next_output[:-1]
         pen_pred = next_output[-1]
-        pen_pred = batch_seq_to_one_hot(pen_pred)
+        #pen_pred = batch_seq_to_one_hot(pen_pred)
+        dist = torch.distributions.categorical.Categorical(probs=pen_pred)
+        print(pen_pred)
+        pen_pred = torch.zeros((1, 1, 3))
+        pen_pred[0, 0, dist.sample()] = 1.0
+        print(f"{pen_pred}")
 
         # generate delta
         mixture_model = criterion.make_mixture_model(*delta_pred)
@@ -212,9 +188,10 @@ if __name__ == "__main__":
 
         # add to sequence
         sequence[0, index + 1] = state
+        print(sequence)
 
         # stop if requested
         if pen_pred[0, 0, 2] == 1.0:
-            pass#break
+            break
 
     sketch.plot()
