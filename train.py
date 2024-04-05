@@ -84,6 +84,7 @@ def train():
     pen_losses = []
     losses = []
     total_num_samples = 0
+    max_gradient_norm = 0
     for epoch_index in range(config.num_epochs):
         for batch_index, (samples) in enumerate(train_dataloader):
             # forward
@@ -103,6 +104,16 @@ def train():
 
             # backwards
             loss.backward()
+
+            # log maximum gradient
+            with torch.no_grad():
+                max_gradient_norm = max(
+                    max_gradient_norm,
+                    max(
+                        parameter.grad.norm().item()
+                        for parameter in model.parameters()
+                    )
+                )
 
             # optimize with gradient clipping
             if config.gradient_clip is not None:
@@ -127,10 +138,12 @@ def train():
                     "test_position_loss": test_position_loss.item(),
                     "test_pen_loss": test_pen_loss.item(),
                     "test_loss": test_position_loss.item() + test_pen_loss.item(),
+                    "max_gradient_norm": max_gradient_norm,
                 }
                 position_losses = []
                 pen_losses = []
                 losses = []
+                max_gradient_norm = 0
 
                 # log metrics
                 print(f"[{epoch_index:04d}, {batch_index:04d}]: {json.dumps(metrics, indent=4)}")
