@@ -27,7 +27,7 @@ class PositionalEncoding(torch.nn.Module):
         division_term = torch.exp(torch.arange(0, embed_dims, 2) * (-math.log(10000.0) / embed_dims))
         positions = positions * division_term
 
-        positional_encoding = torch.zeros(1, max_len, embed_dims)
+        positional_encoding = torch.zeros(1, max_len, embed_dims, device=DEVICE)
         positional_encoding[0, :, 0::2] = torch.sin(positions)
         positional_encoding[0, :, 1::2] = torch.cos(positions)
         self.register_buffer("positional_encoding", positional_encoding)
@@ -43,10 +43,9 @@ class PositionalEncoding(torch.nn.Module):
 
 
 class SketchCritic(torch.nn.Module):
-    def __init__(self, sigma_min: float = 1e-2) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
-        self.sigma_min = sigma_min
         self.pen_critic = torch.nn.NLLLoss(
             weight=torch.tensor([1.0, 1.0, 1.0]),
             reduction="mean"
@@ -103,8 +102,8 @@ class SketchCritic(torch.nn.Module):
     ) -> torch.nn.Module:
         # convert to scale lower triangle
         scale_tril = torch.zeros((*sigmas_x.shape, 2, 2), device=DEVICE)
-        scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=self.sigma_min)
-        scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=self.sigma_min)
+        scale_tril[:, :, :, 0, 0] = sigmas_x
+        scale_tril[:, :, :, 1, 1] = sigmas_y
         scale_tril[:, :, :, 1, 0] = sigmas_xy
 
         # GMM
@@ -161,7 +160,7 @@ class SketchDecoder(torch.nn.Module):
         self.model_config = model_config
     
         input_size = 5
-        self.tokenizer = torch.nn.Linear(input_size, model_config.embed_dims)
+        self.tokenizer = torch.nn.Linear(input_size, model_config.embed_dims, device=DEVICE)
         self.positional_encoder = PositionalEncoding(model_config.embed_dims, dropout=model_config.dropout, max_len=model_config.max_sequence_length)
 
         encoder_layer = torch.nn.TransformerEncoderLayer(
@@ -171,7 +170,8 @@ class SketchDecoder(torch.nn.Module):
             dropout=model_config.dropout,
             activation=torch.nn.functional.relu,
             dtype=torch.float32,
-            batch_first=True
+            batch_first=True,
+            device=DEVICE
         )
         self.transformer = torch.nn.TransformerEncoder(
             encoder_layer,
@@ -180,13 +180,24 @@ class SketchDecoder(torch.nn.Module):
         )
 
         self.output_size = 6 * model_config.num_components + 3
-        self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size)
+        self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size, device=DEVICE)
+        self.linear_1 = torch.nn.Linear(self.output_size, self.output_size, device=DEVICE)
 
         self.elu = torch.nn.ELU()
-        self.sigmoid = torch.nn.Sigmoid()
+        self.relu = torch.nn.ReLU()
         self.softmax = torch.nn.Softmax(dim=2)
 
-        self.to(torch.float32)
+        self.init_weights()
+        self.to(dtype=torch.float32, device=DEVICE)
+
+
+    def init_weights(self) -> None:
+        initrange = 0.1
+        self.tokenizer.weight.data.uniform_(-initrange, initrange)
+        self.linear_0.bias.data.zero_()
+        self.linear_0.weight.data.uniform_(-initrange, initrange)
+        self.linear_1.bias.data.zero_()
+        self.linear_1.weight.data.uniform_(-initrange, initrange)
     
 
     @cached_property
@@ -212,8 +223,8 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = self.elu(sigmas_x) + 1
-        sigmas_y = self.elu(sigmas_y) + 1
+        sigmas_x = self.elu(sigmas_x, alpha=0.1) + 0.1001
+        sigmas_y = self.elu(sigmas_y, alpha=0.1) + 0.1001
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen in 3 simplex
@@ -228,11 +239,13 @@ class SketchDecoder(torch.nn.Module):
         xs = self.positional_encoder(xs)
 
         # decoder
-        mask = torch.nn.Transformer.generate_square_subsequent_mask(xs.shape[1])
+        mask = torch.nn.Transformer.generate_square_subsequent_mask(xs.shape[1]).to(DEVICE)
         xs = self.transformer(xs, mask=mask)
 
         # linear layer
-        ys = self.linear_0(xs)
+        xs = self.linear_0(xs)
+        xs = self.relu(xs)
+        ys = self.linear_1(xs)
 
         return self._unpack_outputs(ys)
     

@@ -35,7 +35,7 @@ def train():
     #drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
 
     # Toy dataset
-    drawings = get_toy_drawings(100)
+    drawings = get_toy_drawings(10_000)
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
@@ -53,7 +53,7 @@ def train():
     # model and optimizer
     model = SketchDecoder(model_config).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-    criterion = SketchCritic(sigma_min=model_config.sigma_min).to(DEVICE)
+    criterion = SketchCritic().to(DEVICE)
 
     # cache save dir
     save_dir = (
@@ -69,7 +69,7 @@ def train():
     total_num_samples = 0
     max_gradient_norm = 0
     for epoch_index in range(config.num_epochs):
-        for batch_index, (samples) in enumerate(train_dataloader):
+        for batch_index, samples in enumerate(train_dataloader):
             # forward
             model.train()
             optimizer.zero_grad()
@@ -95,6 +95,7 @@ def train():
                     max(
                         parameter.grad.norm().item()
                         for parameter in model.parameters()
+                        if parameter.grad is not None
                     )
                 )
 
@@ -110,6 +111,7 @@ def train():
 
                     model.eval()
                     test_outputs = model(test_samples)
+                    print([output[0, 0] for output in test_outputs])
                     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
                     
                 # compute metrics and reset
