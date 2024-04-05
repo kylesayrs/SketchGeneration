@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Union
 
 import json
 import tqdm
+import torch
 
 
 def load_drawings(file_path: str, sparsity: int = 1) -> List[List[int]]:
@@ -52,3 +53,26 @@ def pad_drawings(drawings: List[List[int]], max_sequence_length: int) -> List[Li
         assert len(drawings[index]) == max_sequence_length
 
     return drawings
+
+
+class DrawingsDataset(torch.utils.data.Dataset):
+    def __init__(self, drawings, scale_factor: Union[float, None] = 0.2):
+        self.drawings = drawings
+        self.scale_factor = scale_factor
+
+
+    def __len__(self) -> int:
+        return len(self.drawings)
+
+
+    def __getitem__(self, index: int) -> torch.Tensor:
+        drawing = self.drawings[index]
+
+        if self.scale_factor is not None:
+            scale_factor = (  # lerp
+                torch.rand(1)[0] * ((1 + self.scale_factor) - (1 - self.scale_factor))
+                + (1 - self.scale_factor)
+            )
+            drawing[:, :2] *= scale_factor
+
+        return drawing

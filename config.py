@@ -22,13 +22,14 @@ class TrainingConfig(BaseModel):
     batch_size: int = Field(default=128)
     max_sequence_length: int = Field(default=100)
     data_sparsity: int = Field(default=1)
+    aug_scale_factor: float = Field(default=0.2)
 
     # optimizer
     learning_rate: float = Field(default=1e-5)
     gradient_clip: Union[float, None] = Field(default=1.20)
 
     # logging
-    wandb_mode: str = Field(default="online")
+    wandb_mode: str = Field(default="disabled")
     log_frequency: int = Field(default=100)
 
     save_parent_dir: Union[str, None] = Field(default="checkpoints")

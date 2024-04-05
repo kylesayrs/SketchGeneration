@@ -6,9 +6,9 @@ import wandb
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 
-from config import TrainingConfig, ModelConfig
-from data import load_drawings, pad_drawings
 from model import SketchCritic, SketchDecoder
+from config import TrainingConfig, ModelConfig
+from data import load_drawings, pad_drawings, DrawingsDataset
 
 
 def train():
@@ -67,8 +67,12 @@ def train():
     train_drawings, test_drawings = train_test_split(drawings, train_size=0.8)
 
     # create datasets
-    train_dataloader = DataLoader(train_drawings, batch_size=config.batch_size, shuffle=True, drop_last=True)
-    test_dataloader = DataLoader(test_drawings, batch_size=config.batch_size, shuffle=True, drop_last=True)
+    train_dataset = DrawingsDataset(train_drawings, scale_factor=config.aug_scale_factor)
+    test_dataset = DrawingsDataset(test_drawings, scale_factor=None)
+
+    # create dataloaders
+    train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, drop_last=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=True, drop_last=True)
 
     # model and optimizer
     model = SketchDecoder(model_config)
@@ -88,7 +92,7 @@ def train():
     losses = []
     total_num_samples = 0
     for epoch_index in range(config.num_epochs):
-        for batch_index, samples in enumerate(train_dataloader):            
+        for batch_index, (samples) in enumerate(train_dataloader):
             # forward
             model.train()
             optimizer.zero_grad()
