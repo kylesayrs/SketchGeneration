@@ -63,6 +63,13 @@ class DrawingsDataset(torch.utils.data.Dataset):
         self.scale_factor = scale_factor
 
 
+    def _get_random_scale_factor(self) -> float:
+        return (  # lerp
+            torch.rand(1)[0] * ((1 + self.scale_factor) - (1 - self.scale_factor))
+            + (1 - self.scale_factor)
+        )
+
+
     def __len__(self) -> int:
         return len(self.drawings)
 
@@ -71,11 +78,8 @@ class DrawingsDataset(torch.utils.data.Dataset):
         drawing = self.drawings[index]
 
         if self.scale_factor is not None:
-            scale_factor = (  # lerp
-                torch.rand(1)[0] * ((1 + self.scale_factor) - (1 - self.scale_factor))
-                + (1 - self.scale_factor)
-            )
-            drawing[:, :2] *= scale_factor
+            drawing[:, 0] *= self._get_random_scale_factor()
+            drawing[:, 1] *= self._get_random_scale_factor()
 
         return drawing
 
