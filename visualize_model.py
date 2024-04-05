@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # use criterion for making gmm
     criterion = SketchCritic(sigma_min=model_config.sigma_min)
 
-    """ compute loss
+    #""" compute loss
     drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -119,6 +119,8 @@ if __name__ == "__main__":
     with torch.no_grad():
         train_outputs = model(train_samples)
         test_outputs = model(test_samples)
+    #tmp = [element[0, 0].unsqueeze(0) for element in train_outputs]
+    #print(tmp); exit()
     train_position_loss, train_pen_loss = criterion(train_samples, *train_outputs)
     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
     print(f"train_position_loss: {train_position_loss}")
@@ -126,9 +128,9 @@ if __name__ == "__main__":
     print(f"test_position_loss: {test_position_loss}")
     print(f"test_pen_loss: {test_pen_loss}")
     exit(0)
-    """
+    #"""
 
-    """ draw one
+    #""" draw one
     drawings = load_drawings("data/moon.ndjson", 10)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -139,24 +141,51 @@ if __name__ == "__main__":
     positions = drawing[:, :2]
     positions_next = torch.roll(positions, -1, dims=0)
     delta_positions = positions_next - positions
-
     delta_positions[drawing[:, 4] == 1.0] = torch.tensor([0.0, 0.0])
 
     deltas_drawing = drawing.clone()
     deltas_drawing[:, :2] = delta_positions
-    for state in deltas_drawing:
-        print(state)
-        sketch.add_pred(state)
+    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
+    sketch2 = Sketch()
+    for index, (state, delta_state) in enumerate(zip(drawing, deltas_drawing)):
+        with torch.no_grad():
+            output = model(sequence)  # [output, batch, seq]
+
+        # unpack output
+        next_output = [element[:, index].unsqueeze(0) for element in output]
+        delta_pred = next_output[:-1]
+        pen_pred = next_output[-1]
+
+        # generate pen state
+        dist = torch.distributions.categorical.Categorical(probs=pen_pred)
+        pen_state = torch.zeros((1, 1, 3))
+        pen_state[0, 0, dist.sample()] = 1.0
+
+        # generate delta
+        mixture_model = criterion.make_mixture_model(*delta_pred)
+        next_delta = mixture_model.sample((1, ))[0]
+
+        # pack into next state
+        pred_delta_state = torch.concatenate((next_delta, pen_state), dim=2)[0, 0]
+
+        print((delta_state, pred_delta_state))
+        sketch.add_pred(delta_state)
+        sketch2.add_pred(pred_delta_state)
+
+        sequence[0, index + 1] = state
         #sketch.plot()
 
+        if index >= config.max_sequence_length - 2:
+            break
+
     sketch.plot()
+    sketch2.plot()
     exit(0)
-    """
+    #"""
 
     # generate predictions
     sketch = Sketch()
-    sequence = [[[0, 0, 0, 1, 0]]]
-    sequence = torch.tensor(pad_drawings(sequence, config.max_sequence_length), dtype=torch.float32)
+    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
     for index in range(99):
         print("-----")
         # infer next movement
