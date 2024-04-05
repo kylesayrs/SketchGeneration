@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 
 from model import SketchCritic, SketchDecoder
 from config import TrainingConfig, ModelConfig
-from data import load_drawings, pad_drawings, DrawingsDataset
+from data import load_drawings, pad_drawings, DrawingsDataset, get_toy_drawings
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -30,29 +30,12 @@ def train():
     print(config)
 
     # load data
-    drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
-    drawings = pad_drawings(drawings, config.max_sequence_length)
-    drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
+    #drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
+    #drawings = pad_drawings(drawings, config.max_sequence_length)
+    #drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
 
     # Toy dataset
-    """
-    drawings = torch.tensor([
-        [0.0, 0.0, 1, 0, 0],
-        [0.1, 0.0, 1, 0, 0],
-        [0.2, 0.0, 1, 0, 0],
-        [0.3, 0.0, 1, 0, 0],
-        [0.4, 0.0, 1, 0, 0],
-        [0.5, 0.0, 1, 0, 0],
-        [0.5, 0.0, 0, 1, 0],
-        [0.4, 0.1, 1, 0, 0],
-        [0.3, 0.2, 1, 0, 0],
-        [0.2, 0.3, 1, 0, 0],
-        [0.1, 0.4, 1, 0, 0],
-        [0.0, 0.5, 0, 1, 0],
-        [0.0, 0.0, 0, 0, 1],
-        [0.0, 0.0, 0, 0, 1],
-    ], dtype=torch.float32).repeat(200_000, 1, 1)
-    """
+    drawings = get_toy_drawings(100)
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 

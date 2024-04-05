@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 
 from config import ModelConfig, TrainingConfig
-from data import load_drawings, pad_drawings
+from data import load_drawings, pad_drawings, get_toy_drawings
 from model import SketchCritic, SketchDecoder
 
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # use criterion for making gmm
     criterion = SketchCritic(sigma_min=model_config.sigma_min)
 
-    #""" compute loss
+    """ compute loss
     drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -128,12 +128,13 @@ if __name__ == "__main__":
     print(f"test_position_loss: {test_position_loss}")
     print(f"test_pen_loss: {test_pen_loss}")
     exit(0)
-    #"""
+    """
 
     #""" draw one
-    drawings = load_drawings("data/moon.ndjson", 10)
-    drawings = pad_drawings(drawings, config.max_sequence_length)
-    drawings = torch.tensor(drawings, dtype=torch.float32)
+    #drawings = load_drawings("data/moon.ndjson", 10)
+    #drawings = pad_drawings(drawings, config.max_sequence_length)
+    #drawings = torch.tensor(drawings, dtype=torch.float32)
+    drawings = get_toy_drawings(1)
 
     drawing = drawings[0]
 
