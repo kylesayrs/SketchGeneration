@@ -183,7 +183,7 @@ class SketchDecoder(torch.nn.Module):
         self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size, device=DEVICE)
         self.linear_1 = torch.nn.Linear(self.output_size, self.output_size, device=DEVICE)
 
-        self.elu = torch.nn.ELU()
+        self.elu = torch.nn.ELU(alpha=model_config.elu_alpha)
         self.relu = torch.nn.ReLU()
         self.softmax = torch.nn.Softmax(dim=2)
 
@@ -223,8 +223,8 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = self.elu(sigmas_x, alpha=0.1) + 0.1001
-        sigmas_y = self.elu(sigmas_y, alpha=0.1) + 0.1001
+        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.001
+        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.001
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen in 3 simplex

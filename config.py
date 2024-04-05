@@ -13,6 +13,7 @@ class ModelConfig(BaseModel):
     num_layers: int = Field(default=4)
     dropout: float = Field(default=0.0)
     num_components: int = Field(default=1)
+    elu_alpha: float = Field(default=0.2)
 
 
 class TrainingConfig(BaseModel):
