@@ -173,6 +173,9 @@ if __name__ == "__main__":
         pred_delta_state = torch.concatenate((next_delta, pen_state), dim=2)[0, 0]
 
         print((delta_state, pred_delta_state))
+        if index <= 4:
+            pred_delta_state = delta_state.clone()
+
         sketch.add_pred(delta_state)
         sketch2.add_pred(pred_delta_state)
 
