@@ -108,7 +108,8 @@ def train():
             loss.backward()
 
             # optimize with gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.gradient_clip)
+            if config.gradient_clip is not None:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.gradient_clip)
             optimizer.step()
 
             # test and log

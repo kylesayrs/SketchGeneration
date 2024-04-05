@@ -10,9 +10,9 @@ class ModelConfig(BaseModel):
 
     max_sequence_length: int = Field(default=100)
 
-    num_layers: int = Field(default=2)
+    num_layers: int = Field(default=3)
     dropout: float = Field(default=0.1)
-    num_components: int = Field(default=3)
+    num_components: int = Field(default=15)
     sigma_min: float = Field(default=1e-6)
 
 
@@ -25,10 +25,10 @@ class TrainingConfig(BaseModel):
 
     # optimizer
     learning_rate: float = Field(default=1e-5)
-    gradient_clip: float = Field(default=1.20)
+    gradient_clip: Union[float, None] = Field(default=1.20)
 
     # logging
-    wandb_mode: str = Field(default="disabled")
+    wandb_mode: str = Field(default="online")
     log_frequency: int = Field(default=100)
 
     save_parent_dir: Union[str, None] = Field(default="checkpoints")

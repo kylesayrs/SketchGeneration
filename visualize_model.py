@@ -195,7 +195,6 @@ if __name__ == "__main__":
 
         # add to sequence
         sequence[0, index + 1] = state
-        #print(sequence)
         sketch.plot()
 
         # stop if requested
