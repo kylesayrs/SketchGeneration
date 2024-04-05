@@ -104,7 +104,7 @@ if __name__ == "__main__":
     model.eval()
 
     # use criterion for making gmm
-    criterion = SketchCritic(sigma_min=model_config.sigma_min)
+    criterion = SketchCritic()
 
     """ compute loss
     drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
@@ -148,12 +148,13 @@ if __name__ == "__main__":
     deltas_drawing[:, :2] = delta_positions
     sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
     sketch2 = Sketch()
-    for index, (state, delta_state) in enumerate(zip(drawing, deltas_drawing)):
+    for index, delta_state in enumerate(deltas_drawing):
         with torch.no_grad():
-            output = model(sequence)  # [output, batch, seq]
+            output = model(drawing.unsqueeze(0))  # [output, batch, seq]
 
         # unpack output
         next_output = [element[:, index].unsqueeze(0) for element in output]
+        print(next_output)
         delta_pred = next_output[:-1]
         pen_pred = next_output[-1]
 
@@ -173,7 +174,8 @@ if __name__ == "__main__":
         sketch.add_pred(delta_state)
         sketch2.add_pred(pred_delta_state)
 
-        sequence[0, index + 1] = state
+        #sequence[0, index + 1] = drawing[index + 1]
+        sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
         #sketch.plot()
 
         if index >= config.max_sequence_length - 2:
