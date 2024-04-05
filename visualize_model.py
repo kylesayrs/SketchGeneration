@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     # load model
     model = SketchDecoder(model_config)
-    model.load_state_dict(torch.load(args.checkpoint_path))
+    model.load_state_dict(torch.load(args.checkpoint_path, map_location=torch.device("cpu")))
     model.eval()
 
     # use criterion for making gmm
