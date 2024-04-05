@@ -18,7 +18,7 @@ class ModelConfig(BaseModel):
 
 class TrainingConfig(BaseModel):
     # data
-    num_epochs: int = Field(default=50)
+    num_epochs: int = Field(default=100)
     batch_size: int = Field(default=128)
     max_sequence_length: int = Field(default=100)
     data_sparsity: int = Field(default=1)
@@ -26,10 +26,10 @@ class TrainingConfig(BaseModel):
 
     # optimizer
     learning_rate: float = Field(default=1e-5)
-    gradient_clip: Union[float, None] = Field(default=1.20)
+    gradient_clip: Union[float, None] = Field(default=1.0)
 
     # logging
-    wandb_mode: str = Field(default="disabled")
+    wandb_mode: str = Field(default="online")
     log_frequency: int = Field(default=100)
 
     save_parent_dir: Union[str, None] = Field(default="checkpoints")

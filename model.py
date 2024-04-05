@@ -11,6 +11,8 @@ from functools import cached_property
 
 from config import ModelConfig
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 class PositionalEncoding(torch.nn.Module):
     """
@@ -100,7 +102,7 @@ class SketchCritic(torch.nn.Module):
         sigmas_xy: torch.Tensor
     ) -> torch.nn.Module:
         # convert to scale lower triangle
-        scale_tril = torch.zeros((*sigmas_x.shape, 2, 2))
+        scale_tril = torch.zeros((*sigmas_x.shape, 2, 2), device=DEVICE)
         scale_tril[:, :, :, 0, 0] = torch.clamp(sigmas_x, min=self.sigma_min)
         scale_tril[:, :, :, 1, 1] = torch.clamp(sigmas_y, min=self.sigma_min)
         scale_tril[:, :, :, 1, 0] = sigmas_xy
@@ -173,7 +175,8 @@ class SketchDecoder(torch.nn.Module):
         )
         self.transformer = torch.nn.TransformerEncoder(
             encoder_layer,
-            model_config.num_layers
+            model_config.num_layers,
+            enable_nested_tensor=False,
         )
 
         self.output_size = 6 * model_config.num_components + 3

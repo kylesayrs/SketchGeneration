@@ -10,6 +10,8 @@ from model import SketchCritic, SketchDecoder
 from config import TrainingConfig, ModelConfig
 from data import load_drawings, pad_drawings, DrawingsDataset
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def train():
     # set up configuration
@@ -30,18 +32,9 @@ def train():
     # load data
     drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
-    drawings = torch.tensor(drawings, dtype=torch.float32)
+    drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
 
-    # TODO: create dataset and add data augmentation
-
-    # TESTING
-    #drawings[:, :, 0] = 0
-    #drawings[:, :, 1] = 0
-    #drawings[:, :, 2] = 0
-    #drawings[:, :, 3] = 0
-    #drawings[:, :, 4] = 1
-
-    # TESTING
+    # Toy dataset
     """
     drawings = torch.tensor([
         [0.0, 0.0, 1, 0, 0],
@@ -75,9 +68,9 @@ def train():
     test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=True, drop_last=True)
 
     # model and optimizer
-    model = SketchDecoder(model_config)
+    model = SketchDecoder(model_config).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-    criterion = SketchCritic(sigma_min=model_config.sigma_min)
+    criterion = SketchCritic(sigma_min=model_config.sigma_min).to(DEVICE)
 
     # cache save dir
     save_dir = (

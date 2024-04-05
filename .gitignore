@@ -1,0 +1,8 @@
+# standard git/python stuff
+*.pyc
+__pycache__/
+
+# special directories
+data/
+wandb/
+checkpoints/
