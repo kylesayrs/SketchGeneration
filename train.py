@@ -30,12 +30,12 @@ def train():
     print(config)
 
     # load data
-    #drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
-    #drawings = pad_drawings(drawings, config.max_sequence_length)
-    #drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
+    drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
+    drawings = pad_drawings(drawings, config.max_sequence_length)
+    drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
 
     # Toy dataset
-    drawings = get_toy_drawings(10_000)
+    #drawings = get_toy_drawings(10_000)
     
     print(f"Loaded {drawings.shape[0]} with sequence length {drawings.shape[1]}")
 
