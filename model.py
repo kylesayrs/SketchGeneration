@@ -49,7 +49,7 @@ class SketchCritic(torch.nn.Module):
         self.pen_critic = torch.nn.NLLLoss(
             weight=torch.tensor([1.0, 1.0, 1.0]),
             reduction="mean"
-        ) #torch.nn.CrossEntropyLoss()
+        )
 
 
     def _get_positions_loss(
@@ -111,10 +111,6 @@ class SketchCritic(torch.nn.Module):
         components = MultivariateNormal(mus, scale_tril=scale_tril)
         mixture_model = MixtureSameFamily(mixture, components)
 
-        #print(logits[0])
-        #print(mus[0, 0])
-        #print(scale_tril[0, 0])
-
         return mixture_model
         
 
@@ -141,13 +137,6 @@ class SketchCritic(torch.nn.Module):
         # compute separate losses
         position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
-
-        #print(positions_true[0, 10])
-        #print(mus_pred[0, 10])
-        #print(pen_true[0])
-        #print(pen_pred[0])
-        #print(torch.argmax(pen_true.reshape((-1, 3)), dim=1))
-        #print(pen_loss)
         
         # sum losses
         return position_loss, pen_loss
@@ -181,10 +170,8 @@ class SketchDecoder(torch.nn.Module):
 
         self.output_size = 6 * model_config.num_components + 3
         self.linear_0 = torch.nn.Linear(model_config.embed_dims, self.output_size, device=DEVICE)
-        self.linear_1 = torch.nn.Linear(self.output_size, self.output_size, device=DEVICE)
 
         self.elu = torch.nn.ELU(alpha=model_config.elu_alpha)
-        self.relu = torch.nn.ReLU()
         self.softmax = torch.nn.Softmax(dim=2)
 
         self.init_weights()
@@ -196,8 +183,6 @@ class SketchDecoder(torch.nn.Module):
         self.tokenizer.weight.data.uniform_(-initrange, initrange)
         self.linear_0.bias.data.zero_()
         self.linear_0.weight.data.uniform_(-initrange, initrange)
-        self.linear_1.bias.data.zero_()
-        self.linear_1.weight.data.uniform_(-initrange, initrange)
     
 
     @cached_property
@@ -223,8 +208,8 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.001
-        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.001
+        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.00001
+        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.00001
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen in 3 simplex
@@ -243,9 +228,7 @@ class SketchDecoder(torch.nn.Module):
         xs = self.transformer(xs, mask=mask)
 
         # linear layer
-        xs = self.linear_0(xs)
-        xs = self.relu(xs)
-        ys = self.linear_1(xs)
+        ys = self.linear_0(xs)
 
         return self._unpack_outputs(ys)
     
