@@ -154,8 +154,8 @@ if __name__ == "__main__":
 
         # unpack output
         next_output = [element[:, index].unsqueeze(0) for element in output]
-        next_output[2] *= 0.01
-        next_output[3] *= 0.01
+        next_output[2] *= 1
+        next_output[3] *= 1
         print(next_output)
         delta_pred = next_output[:-1]
         pen_pred = next_output[-1]
@@ -179,8 +179,8 @@ if __name__ == "__main__":
         sketch.add_pred(delta_state)
         sketch2.add_pred(pred_delta_state)
 
-        #sequence[0, index + 1] = drawing[index + 1]
-        sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
+        sequence[0, index + 1] = drawing[index + 1]
+        #sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
         sketch.plot()
         sketch2.plot()
 
