@@ -179,11 +179,10 @@ class SketchDecoder(torch.nn.Module):
 
 
     def init_weights(self) -> None:
-        initrange = 0.1
-        self.tokenizer.weight.data.uniform_(-initrange, initrange)
-        self.linear_0.bias.data.zero_()
-        self.linear_0.weight.data.uniform_(-initrange, initrange)
-    
+        for name, param in self.named_parameters():
+            if "weight" in name and param.data.dim() == 2:
+                torch.nn.init.kaiming_uniform_(param)
+        
 
     @cached_property
     def _split_args(self) -> List[Tuple[int, int]]:
@@ -208,9 +207,9 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.00001
-        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.00001
-        sigmas_xy = torch.tanh(sigmas_xy)
+        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.01
+        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
+        sigmas_xy = torch.tanh(sigmas_xy) + 0.01
 
         # pen in 3 simplex
         pen_pred = self.softmax(pen_pred)
