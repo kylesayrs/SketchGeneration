@@ -107,7 +107,7 @@ if __name__ == "__main__":
     criterion = SketchCritic()
 
     """ compute loss
-    drawings = load_drawings("data/moon.ndjson", config.data_sparsity)
+    drawings = load_drawings("data/square.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
     train_drawings, test_drawings = train_test_split(drawings, train_size=0.8)
@@ -131,10 +131,10 @@ if __name__ == "__main__":
     """
 
     #""" draw one
-    #drawings = load_drawings("data/moon.ndjson", 10)
-    #drawings = pad_drawings(drawings, config.max_sequence_length)
-    #drawings = torch.tensor(drawings, dtype=torch.float32)
-    drawings = get_toy_drawings(1)
+    drawings = load_drawings("data/square.ndjson", 10)
+    drawings = pad_drawings(drawings, config.max_sequence_length)
+    drawings = torch.tensor(drawings, dtype=torch.float32)
+    #drawings = get_toy_drawings(1)
 
     drawing = drawings[0]
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         sketch2.add_pred(pred_delta_state)
 
         sequence[0, index + 1] = drawing[index + 1]
-        #sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
+        sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
         sketch.plot()
         sketch2.plot()
 
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             break
 
     sketch.plot()
-    sketch2.plot()
+    #sketch2.plot()
     exit(0)
     #"""
 

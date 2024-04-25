@@ -4,7 +4,7 @@ from data import load_drawings
 
 
 if __name__ == "__main__":
-    drawings = load_drawings("data/moon.ndjson")
+    drawings = load_drawings("data/square.ndjson")
     
     sequence_lengths = [len(drawing) for drawing in drawings]
 
