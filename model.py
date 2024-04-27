@@ -38,7 +38,7 @@ class PositionalEncoding(torch.nn.Module):
         Arguments:
             x: Tensor, shape ``[batch_size, seq_len, embedding_dim]``
         """
-        x = x + self.positional_encoding[:, :x.size(1)]
+        x += self.positional_encoding[:, :x.size(1)]
         return self.dropout(x)
 
 

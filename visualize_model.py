@@ -130,7 +130,7 @@ if __name__ == "__main__":
     exit(0)
     """
 
-    #""" draw one
+    """ draw one
     drawings = load_drawings("data/square.ndjson", 10)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     sketch.plot()
     #sketch2.plot()
     exit(0)
-    #"""
+    """
 
     # generate predictions
     sketch = Sketch()
@@ -206,10 +206,12 @@ if __name__ == "__main__":
         
         # only use output of next token in sequence
         next_output = [element[:, index].unsqueeze(0) for element in output]
-        print(next_output[0])
-        print(next_output[1])
-        print(next_output[2])
-        print(next_output[3])
+        print(f"logits   : {next_output[0]}")
+        print(f"mus      : {next_output[1]}")
+        print(f"sigmas x : {next_output[2]}")
+        print(f"sigmas y : {next_output[3]}")
+        print(f"sigmas xy: {next_output[4]}")
+        print(f"pen      : {next_output[5]}")
 
         # unpack output
         delta_pred = next_output[:-1]
@@ -223,7 +225,6 @@ if __name__ == "__main__":
         # generate delta
         mixture_model = criterion.make_mixture_model(*delta_pred)
         next_delta = mixture_model.sample((1, ))[0]
-        print((next_delta, pen_pred))
 
         # pack into next state
         pred = torch.concatenate((next_delta, pen_state), dim=2)
