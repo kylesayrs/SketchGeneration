@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     deltas_drawing = drawing.clone()
     deltas_drawing[:, :2] = delta_positions
-    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 0, -100]]], config.max_sequence_length), dtype=torch.float32)
+    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
     #print(drawing)
     #print(sequence)
     #exit(0)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
 
     # generate predictions
     sketch = Sketch()
-    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 0, -100]]], config.max_sequence_length), dtype=torch.float32)
+    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
     for index in range(99):
         print("-----")
         # infer next movement
