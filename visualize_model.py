@@ -146,11 +146,14 @@ if __name__ == "__main__":
 
     deltas_drawing = drawing.clone()
     deltas_drawing[:, :2] = delta_positions
-    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
+    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 0, -100]]], config.max_sequence_length), dtype=torch.float32)
+    #print(drawing)
+    #print(sequence)
+    #exit(0)
     sketch2 = Sketch()
     for index, delta_state in enumerate(deltas_drawing):
         with torch.no_grad():
-            output = model(drawing.unsqueeze(0))  # [output, batch, seq]
+            output = model(sequence)  # [output, batch, seq]
 
         # unpack output
         next_output = [element[:, index].unsqueeze(0) for element in output]
@@ -180,7 +183,7 @@ if __name__ == "__main__":
         sketch2.add_pred(pred_delta_state)
 
         sequence[0, index + 1] = drawing[index + 1]
-        sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
+        sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch2.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
         sketch.plot()
         sketch2.plot()
 
@@ -194,7 +197,7 @@ if __name__ == "__main__":
 
     # generate predictions
     sketch = Sketch()
-    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
+    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 0, -100]]], config.max_sequence_length), dtype=torch.float32)
     for index in range(99):
         print("-----")
         # infer next movement
