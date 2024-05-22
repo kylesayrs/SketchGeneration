@@ -157,9 +157,15 @@ class SketchCritic(torch.nn.Module):
         pen_true = torch.roll(pen_true, -1, dims=1)
         pen_true[:, -1] = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32)
         is_end = pen_true[:, :, 2] == 1
+        print(pen_pred[0, 25])
+        print(pen_pred[0, 26])
+        print(pen_pred[0, 27])
+        print(pen_pred[0, -1])
+        print(pen_true[0, 26])
+        print("-----")
 
         # compute separate losses
-        position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = torch.tensor(0.0)#self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses
@@ -241,7 +247,7 @@ class SketchDecoder(torch.nn.Module):
         sigmas_xy = sigmas_xy * 0.0
 
         # pen in 3 simplex
-        pen_pred = self.softmax(pen_pred)
+        #pen_pred = self.softmax(pen_pred)
 
         return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred
 
