@@ -42,14 +42,38 @@ class PositionalEncoding(torch.nn.Module):
         return self.dropout(x)
 
 
+class FocalLoss(torch.nn.Module):
+    """Implementation of the Focal loss function
+
+    Args:
+        alpha: class weight vector to be used in case of class imbalance
+        alpha: hyper-parameter for the focal loss scaling.
+    """
+    def __init__(self, alpha: List[int] = None, gamma: int = 2):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+
+
+    def forward(self, outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        ce_loss = torch.nn.functional.cross_entropy(outputs, targets, reduction="none", weight=self.alpha) 
+        pt = torch.exp(-ce_loss)
+        focal_loss = ((1-pt)**self.gamma * ce_loss).mean() # mean over the batch
+
+        return focal_loss
+
+
 class SketchCritic(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
+        """
         self.pen_critic = torch.nn.NLLLoss(
             weight=torch.tensor([1.0, 1.0, 1.0]),
             reduction="mean"
         )
+        """
+        self.pen_critic = FocalLoss(gamma=1)
 
 
     def _get_positions_loss(
@@ -162,9 +186,11 @@ class SketchDecoder(torch.nn.Module):
             batch_first=True,
             device=DEVICE
         )
+        encoder_norm = torch.nn.LayerNorm(model_config.embed_dims) 
         self.transformer = torch.nn.TransformerEncoder(
             encoder_layer,
             model_config.num_layers,
+            encoder_norm,
             enable_nested_tensor=False,
         )
 
@@ -207,9 +233,12 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.01
-        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
-        sigmas_xy = torch.tanh(sigmas_xy) + 0.01
+        #sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.01
+        #sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
+        sigmas_x = self.elu(sigmas_x) + self.elu.alpha
+        sigmas_y = self.elu(sigmas_y) + self.elu.alpha
+        #sigmas_xy = torch.tanh(sigmas_xy)
+        sigmas_xy = sigmas_xy * 0.0
 
         # pen in 3 simplex
         pen_pred = self.softmax(pen_pred)

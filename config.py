@@ -10,10 +10,10 @@ class ModelConfig(BaseModel):
 
     max_sequence_length: int = Field(default=100)
 
-    num_layers: int = Field(default=3)
-    dropout: float = Field(default=0.1)
+    num_layers: int = Field(default=2)
+    dropout: float = Field(default=0.0)
     num_components: int = Field(default=3)
-    elu_alpha: float = Field(default=1.0)
+    elu_alpha: float = Field(default=100.0)
 
 
 class TrainingConfig(BaseModel):
@@ -25,7 +25,7 @@ class TrainingConfig(BaseModel):
     aug_scale_factor: float = Field(default=0.05)
 
     # optimizer
-    learning_rate: float = Field(default=1e-04)
+    learning_rate: float = Field(default=5e-04)
     gradient_clip: Union[float, None] = Field(default=1.0)
 
     # logging

@@ -33,6 +33,9 @@ def train():
     drawings = load_drawings("data/clock.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
+    print(drawings[0])
+    drawings = drawings[:1].repeat(10_000, 1, 1)
+    #exit(0)
 
     # Toy dataset
     #drawings = get_toy_drawings(10_000)
@@ -111,7 +114,6 @@ def train():
 
                     model.eval()
                     test_outputs = model(test_samples)
-                    print([output[0, 0] for output in test_outputs])
                     test_position_loss, test_pen_loss = criterion(test_samples, *test_outputs)
                     
                 # compute metrics and reset
