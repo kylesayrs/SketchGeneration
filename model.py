@@ -67,13 +67,9 @@ class SketchCritic(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
-        """
-        self.pen_critic = torch.nn.CrossEntropyLoss(
-            weight=torch.tensor([1.0, 1.0, 1.0]),
-            reduction="mean"
-        )
-        """
-        self.pen_critic = FocalLoss(gamma=1.5)
+        #self.pen_critic = torch.nn.CrossEntropyLoss(reduction="mean")
+        #self.pen_critic = torch.nn.NLLLoss(reduction="mean")
+        self.pen_critic = FocalLoss(gamma=1.2)
 
 
     def _get_positions_loss(
@@ -92,9 +88,6 @@ class SketchCritic(torch.nn.Module):
         # compute true delta x and delta y
         positions_next = torch.roll(positions_true, -1, dims=1)
         deltas_true = positions_next - positions_true
-        print(deltas_true[0, 26])
-        print(deltas_true[0, 30])
-        print(deltas_true[0, 32])
 
         deltas_true[is_end] = 0.0  # by forcing all the positions at the
                                    # end to be zero, they will always be
@@ -160,16 +153,9 @@ class SketchCritic(torch.nn.Module):
         pen_true = torch.roll(pen_true, -1, dims=1)
         pen_true[:, -1] = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32)
         is_end = pen_true[:, :, 2] == 1
-        print(pen_pred[0, 26])
-        print(pen_true[0, 26])
-
-        print(pen_pred[0, 32])
-        print(pen_true[0, 32])
-        print("-----")
 
         # compute separate losses
         position_loss = torch.tensor(0.0)#self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
-        #self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses
@@ -247,10 +233,9 @@ class SketchDecoder(torch.nn.Module):
         #sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
         sigmas_x = self.elu(sigmas_x) + self.elu.alpha
         sigmas_y = self.elu(sigmas_y) + self.elu.alpha
-        #sigmas_xy = torch.tanh(sigmas_xy)
-        sigmas_xy = sigmas_xy * 0.0
+        sigmas_xy = torch.tanh(sigmas_xy)
 
-        # pen in 3 simplex
+        # pen logits in (-inf, inf)
         #pen_pred = self.softmax(pen_pred)
 
         return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred

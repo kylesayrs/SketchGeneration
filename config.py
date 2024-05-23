@@ -10,9 +10,9 @@ class ModelConfig(BaseModel):
 
     max_sequence_length: int = Field(default=100)
 
-    num_layers: int = Field(default=1)
-    dropout: float = Field(default=0.0)
-    num_components: int = Field(default=3)
+    num_layers: int = Field(default=2)
+    dropout: float = Field(default=0.1)
+    num_components: int = Field(default=1)
     elu_alpha: float = Field(default=1.0)
 
 
@@ -21,12 +21,12 @@ class TrainingConfig(BaseModel):
     num_epochs: int = Field(default=100)
     batch_size: int = Field(default=128)
     max_sequence_length: int = Field(default=100)
-    data_sparsity: int = Field(default=1)
+    data_sparsity: int = Field(default=100)
     aug_scale_factor: float = Field(default=None)
 
     # optimizer
     learning_rate: float = Field(default=3e-04)
-    gradient_clip: Union[float, None] = Field(default=None)
+    gradient_clip: Union[float, None] = Field(default=1.0)
 
     # logging
     wandb_mode: str = Field(default="online")
