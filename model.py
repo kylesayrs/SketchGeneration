@@ -68,12 +68,12 @@ class SketchCritic(torch.nn.Module):
         super().__init__()
 
         """
-        self.pen_critic = torch.nn.NLLLoss(
+        self.pen_critic = torch.nn.CrossEntropyLoss(
             weight=torch.tensor([1.0, 1.0, 1.0]),
             reduction="mean"
         )
         """
-        self.pen_critic = FocalLoss(gamma=1)
+        self.pen_critic = FocalLoss(gamma=1.5)
 
 
     def _get_positions_loss(
@@ -92,6 +92,9 @@ class SketchCritic(torch.nn.Module):
         # compute true delta x and delta y
         positions_next = torch.roll(positions_true, -1, dims=1)
         deltas_true = positions_next - positions_true
+        print(deltas_true[0, 26])
+        print(deltas_true[0, 30])
+        print(deltas_true[0, 32])
 
         deltas_true[is_end] = 0.0  # by forcing all the positions at the
                                    # end to be zero, they will always be
@@ -157,15 +160,16 @@ class SketchCritic(torch.nn.Module):
         pen_true = torch.roll(pen_true, -1, dims=1)
         pen_true[:, -1] = torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32)
         is_end = pen_true[:, :, 2] == 1
-        print(pen_pred[0, 25])
         print(pen_pred[0, 26])
-        print(pen_pred[0, 27])
-        print(pen_pred[0, -1])
         print(pen_true[0, 26])
+
+        print(pen_pred[0, 32])
+        print(pen_true[0, 32])
         print("-----")
 
         # compute separate losses
         position_loss = torch.tensor(0.0)#self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        #self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses

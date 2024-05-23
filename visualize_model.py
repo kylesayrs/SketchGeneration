@@ -130,8 +130,8 @@ if __name__ == "__main__":
     exit(0)
     """
 
-    """ draw one
-    drawings = load_drawings("data/square.ndjson", 10)
+    #""" draw one
+    drawings = load_drawings("data/clock.ndjson", 100)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
     #drawings = get_toy_drawings(1)
@@ -146,12 +146,20 @@ if __name__ == "__main__":
 
     deltas_drawing = drawing.clone()
     deltas_drawing[:, :2] = delta_positions
-    sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
+    #sequence = torch.tensor(pad_drawings([[[0, 0, 0, 1, 0]]], config.max_sequence_length), dtype=torch.float32)
+    sequence = torch.tensor(pad_drawings([[deltas_drawing[0].tolist()]], config.max_sequence_length), dtype=torch.float32)
     #print(drawing)
     #print(sequence)
     #exit(0)
+    sequence = deltas_drawing.clone().unsqueeze(0)
+    print(sequence)
     sketch2 = Sketch()
-    for index, delta_state in enumerate(deltas_drawing):
+
+    sketch.add_pred(sequence[0][0])
+    sketch2.add_pred(sequence[0][0])
+
+    print(deltas_drawing)
+    for index, delta_state in enumerate(deltas_drawing[1:]):
         with torch.no_grad():
             output = model(sequence)  # [output, batch, seq]
 
@@ -159,9 +167,16 @@ if __name__ == "__main__":
         next_output = [element[:, index].unsqueeze(0) for element in output]
         next_output[2] *= 1
         next_output[3] *= 1
-        print(next_output)
+        print(f"index: {index}")
+        print(f"logits   : {next_output[0]}")
+        print(f"mus      : {next_output[1]}")
+        print(f"sigmas x : {next_output[2]}")
+        print(f"sigmas y : {next_output[3]}")
+        print(f"sigmas xy: {next_output[4]}")
+        print(f"pen      : {next_output[5]}")
+        print()
         delta_pred = next_output[:-1]
-        pen_pred = next_output[-1]
+        pen_pred = torch.nn.functional.softmax(next_output[-1], dim=2)
 
         # generate pen state
         dist = torch.distributions.categorical.Categorical(probs=pen_pred)
@@ -176,13 +191,13 @@ if __name__ == "__main__":
         pred_delta_state = torch.concatenate((next_delta, pen_state), dim=2)[0, 0]
 
         print((delta_state, pred_delta_state))
-        if index <= 4:
+        if index <= 400:
             pred_delta_state = delta_state.clone()
 
         sketch.add_pred(delta_state)
         sketch2.add_pred(pred_delta_state)
 
-        sequence[0, index + 1] = drawing[index + 1]
+        #sequence[0, index + 1] = drawing[index + 1]
         sequence[0, index + 1] = torch.concatenate((torch.tensor(numpy.array([[sketch2.pen_position / 255]]), dtype=torch.float32), pen_state), dim=2)
         sketch.plot()
         sketch2.plot()
@@ -193,7 +208,7 @@ if __name__ == "__main__":
     sketch.plot()
     #sketch2.plot()
     exit(0)
-    """
+    #"""
 
     # generate predictions
     sketch = Sketch()
