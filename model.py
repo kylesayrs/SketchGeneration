@@ -155,7 +155,7 @@ class SketchCritic(torch.nn.Module):
         is_end = pen_true[:, :, 2] == 1
 
         # compute separate losses
-        position_loss = torch.tensor(0.0)#self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses
@@ -229,10 +229,10 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        #sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.01
-        #sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
-        sigmas_x = self.elu(sigmas_x) + self.elu.alpha
-        sigmas_y = self.elu(sigmas_y) + self.elu.alpha
+        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.01
+        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
+        # sigmas_x = self.elu(sigmas_x) + self.elu.alpha
+        # sigmas_y = self.elu(sigmas_y) + self.elu.alpha
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen logits in (-inf, inf)

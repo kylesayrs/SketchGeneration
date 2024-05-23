@@ -18,11 +18,11 @@ class ModelConfig(BaseModel):
 
 class TrainingConfig(BaseModel):
     # data
-    num_epochs: int = Field(default=100)
+    num_epochs: int = Field(default=300)
     batch_size: int = Field(default=128)
     max_sequence_length: int = Field(default=100)
     data_sparsity: int = Field(default=100)
-    aug_scale_factor: float = Field(default=None)
+    aug_scale_factor: float = Field(default=0.05)
 
     # optimizer
     learning_rate: float = Field(default=3e-04)
