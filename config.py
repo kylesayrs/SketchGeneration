@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 class ModelConfig(BaseModel):
     embed_dims: int = Field(default=32)
     hidden_dims: int = Field(default=64)
-    num_heads: int = Field(default=1)
+    num_heads: int = Field(default=2)
 
     max_sequence_length: int = Field(default=100)
 
