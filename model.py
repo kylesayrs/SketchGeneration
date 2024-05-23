@@ -155,7 +155,7 @@ class SketchCritic(torch.nn.Module):
         is_end = pen_true[:, :, 2] == 1
 
         # compute separate losses
-        position_loss = self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
+        position_loss = torch.tensor(0.0)#self._get_positions_loss(positions_true, is_end, logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy)
         pen_loss = self._get_pen_loss(pen_true, pen_pred)
         
         # sum losses
