@@ -25,7 +25,7 @@ class TrainingConfig(BaseModel):
     data_sparsity: int = Field(default=1)
     aug_scale_factor: float = Field(default=0.05)
 
-    # optimizerx
+    # optimizer
     learning_rate: float = Field(default=3e-04)
     gradient_clip: Union[float, None] = Field(default=1.0)
 
