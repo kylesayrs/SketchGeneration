@@ -89,14 +89,11 @@ class SketchCritic(torch.nn.Module):
         positions_next = torch.roll(positions_true, -1, dims=1)
         deltas_true = positions_next - positions_true
 
-        deltas_true[is_end] = 0.0  # by forcing all the positions at the
-                                   # end to be zero, they will always be
-                                   # correct and :. not contribute loss
-
         # mean negative log likelihood
-        # original paper uses sum
-        # then divided by max sequence length
-        return -1 * mixture_model.log_prob(deltas_true).mean()
+        log_prob = mixture_model.log_prob(deltas_true)
+
+        # only include samples before drawing end
+        return -1 * log_prob[~is_end].mean()
 
 
     def _get_pen_loss(
