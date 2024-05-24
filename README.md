@@ -11,13 +11,13 @@ The work in this repo is based upon research produced by Google Brain "[A Neural
 ## Lessons Learned ##
 1. Stably training gaussian mixture models is hard. Moreover, training on autoregressive sequences of gaussian mixture models is even harder.
 
-The first aspect that makes GMM sequence models difficult to train is the tendency of GMMs to collapse onto sample points and produce exploding gradients (see [GMMPyTorch](https://github.com/kylesayrs/GMMPytorch)). The original authors partially address this by imposing a `gradient_clip` parameter which limits the maximum magnitude of any one gradient step. While this technique is effective, I found that the model still produced extreme positive loss spikes which made analysis difficult. In addition to imposing gradient clipping, I replace the exponential activation, which is subject to gradient explosion on both sides, with ELU plus a very small constant to the diagonal sigmas which limits the minimum standard deviation variable, thereby limiting the collapsing effect.
+The first aspect that makes GMM sequence models difficult to train is the tendency of GMMs to collapse onto sample points and produce exploding gradients (see [GMMPyTorch](https://github.com/kylesayrs/GMMPytorch)). The original authors partially address this by imposing a `gradient_clip` parameter which limits the maximum magnitude of any one gradient step. While this technique is effective, I found that the model still produced extreme positive loss spikes which made analysis difficult. In addition to imposing gradient clipping, I replace the exponential activation, which is subject to gradient explosion on both sides, with `ELU` plus a very small constant to the diagonal sigmas which limits the minimum standard deviation variable, thereby limiting the collapsing effect.
 
-The second difficult aspect is the autoregressive nature of the sequence model. Like any autoregressive model, this model is prone to hallucinations if predictions are produced which are not within the dataset distribution. To limit this effect, a temperature parameter is required during inference time to reduce the chance of positions and pen states outside of the expected distribution.
+The second difficult aspect is the autoregressive nature of the sequence model. Like any autoregressive model, this model is prone to hallucinations if predictions are produced which are not within the dataset distribution. To limit this effect, a `temperature` parameter is required during inference time to reduce the chance of positions and pen states outside of the expected distribution.
 
 2. Focal loss over NLLLoss
 
-The original paper uses a softmax activation followed by NLLLoss to learn the pen state classes. While this technique works, I found that I was able to learn the minority class (pen_up) much faster using focal loss with a gamma of value of 2.
+The original paper uses a softmax activation followed by `NLLLoss` to learn the pen state classes. While this technique works, I found that I was able to learn the minority class (pen_up) much faster using focal loss with a `gamma` of value of 2.
 
 3. Train a toy dataset first
 
