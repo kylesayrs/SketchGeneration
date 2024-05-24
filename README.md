@@ -22,3 +22,7 @@ The original paper uses a softmax activation followed by NLLLoss to learn the pe
 3. Train a toy dataset first
 
 I found that my best work was done when training using using a toy dataset, rather than starting with the full dataset. Training on just a single sample helped me catch bugs and served as a basis for expected model output outside of just loss alone. 
+
+
+## Future work ##
+One notable flaw in the original architecture is that the pen state and pen position are predicted independently of one another. This can lead to situations where the model infers a split pen position  distribution which attempts to match both the pen being raised and the the pen continuing to be drawn. This could be resolved by either coupling a new pen distribution to each component of the gaussian distribution or explicitly conditioning the GMM components on the pen prediction.

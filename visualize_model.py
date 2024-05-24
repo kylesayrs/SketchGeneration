@@ -131,7 +131,7 @@ if __name__ == "__main__":
     """
 
     #""" draw one
-    temperature = 1.0
+    temperature = 0.7
 
     drawings = load_drawings("data/clock.ndjson", 100)
     drawings = pad_drawings(drawings, config.max_sequence_length)
