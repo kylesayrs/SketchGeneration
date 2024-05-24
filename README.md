@@ -14,6 +14,7 @@ The work in this repo is based upon research produced by Google Brain "[A Neural
 The first aspect that makes GMM sequence models difficult to train is the tendency of GMMs to collapse onto sample points and produce exploding gradients (see [GMMPyTorch](https://github.com/kylesayrs/GMMPytorch)). The original authors partially address this by imposing a `gradient_clip` parameter which limits the maximum magnitude of any one gradient step. While this technique is effective, I found that the model still produced extreme positive loss spikes which made analysis difficult. In addition to imposing gradient clipping, I replace the exponential activation, which is subject to gradient explosion on both sides, with `ELU` plus a very small constant to the diagonal sigmas which limits the minimum standard deviation variable, thereby limiting the collapsing effect.
 
 2. Autoregressive inference is highly dependent on temperature
+
 The second difficult aspect is the autoregressive nature of the sequence model. Like any autoregressive model, this model is prone to hallucinations if predictions are produced which are not within the dataset distribution. To limit this effect, a `temperature` parameter is required during inference time to reduce the chance of positions and pen states outside of the expected distribution.
 
 3. Focal loss over NLLLoss
