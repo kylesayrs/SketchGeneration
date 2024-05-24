@@ -11,7 +11,7 @@ The work in this repo is based upon research produced by Google Brain "[A Neural
 ## Lessons Learned ##
 1. Gaussian mixture models do not train stably
 
-The first aspect that makes GMM sequence models difficult to train is the tendency of GMMs to collapse onto sample points and produce exploding gradients (see [GMMPyTorch](https://github.com/kylesayrs/GMMPytorch)). The original authors partially address this by imposing a `gradient_clip` parameter which limits the maximum magnitude of any one gradient step. While this technique is effective, I found that the model still produced extreme positive loss spikes which made analysis difficult. In addition to imposing gradient clipping, I replace the exponential activation, which is subject to gradient explosion on both sides, with `ELU` plus a very small constant to the diagonal sigmas which limits the minimum standard deviation variable, thereby limiting the collapsing effect.
+The first aspect that makes GMM sequence models difficult to train is the tendency of GMMs to collapse onto sample points and produce exploding gradients (see [GMMPyTorch](https://github.com/kylesayrs/GMMPytorch)). The original authors partially address this by imposing a `gradient_clip` parameter which limits the maximum magnitude of any one gradient step. While this technique is effective, I found that the model still produced extreme positive loss spikes which made analysis difficult and renders some batches useless/counter productive. My solution was to, in addition to imposing gradient clipping, replace the `exp` activation, which is subject to gradient explosion on both sides, with `ELU` plus a very small constant to the diagonal sigmas which limits the minimum standard deviation variable, thereby limiting the collapsing effect.
 
 2. Autoregressive inference is highly dependent on temperature
 
@@ -23,7 +23,7 @@ The original paper uses a softmax activation followed by `NLLLoss` to learn the 
 
 4. Train a toy dataset first
 
-I found that my best work was done when training using using a toy dataset, rather than starting with the full dataset. Training on just a single sample helped me catch bugs and served as a basis for expected model output outside of just loss alone. 
+I found that my best work was done when training using a toy dataset, rather than starting with the full dataset. Training on just a single sample helped me catch bugs and served as a basis for expected model output outside of just loss alone. 
 
 
 ## Future work ##
