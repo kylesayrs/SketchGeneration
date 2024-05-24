@@ -1,5 +1,5 @@
 # Sketch Generation #
-The work in this repo is based upon research produced by Google Brain "[A Neural Representation of Sketch Drawings](https://arxiv.org/pdf/1704.03477)". Notable differences include
+The work in this repo is based upon research produced by Google Brain "[A Neural Representation of Sketch Drawings](https://arxiv.org/pdf/1704.03477)" which models probabilistic sequence prediction to generate sketch drawings. Notable differences include
 * Replacement of HyperLSTM backbone with multi-headed transformer layers
 * Replacement of NLLLoss with focal loss to more quickly learn underrepresented pen states
 * Replacement of exponential activation of sigma variables with ELU to promote GMM training stability
