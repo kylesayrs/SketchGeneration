@@ -229,14 +229,11 @@ class SketchDecoder(torch.nn.Module):
 
         # diagonal sigmas in [0, inf]
         # covariance sigmas in [-1, 1]
-        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + 0.01
-        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + 0.01
-        # sigmas_x = self.elu(sigmas_x) + self.elu.alpha
-        # sigmas_y = self.elu(sigmas_y) + self.elu.alpha
+        sigmas_x = self.elu(sigmas_x) + self.elu.alpha + self.model_config.sigma_min
+        sigmas_y = self.elu(sigmas_y) + self.elu.alpha + self.model_config.sigma_min
         sigmas_xy = torch.tanh(sigmas_xy)
 
         # pen logits in (-inf, inf)
-        #pen_pred = self.softmax(pen_pred)
 
         return logits_pred, mus_pred, sigmas_x, sigmas_y, sigmas_xy, pen_pred
 

@@ -18,13 +18,15 @@ def train():
     config = TrainingConfig()
     model_config = ModelConfig()
 
+    wandb_config = config.model_dump()
+    wandb_config.update(model_config.model_dump())
     wandb.init(
         project="SketchGeneration",
         entity="kylesayrs",
         name=None,
         reinit=False,
         mode=config.wandb_mode,
-        config=config.model_dump().update(model_config.model_dump())
+        config=wandb_config
     )
     print(f"Run id: {wandb.run.id}")
     print(config)
@@ -33,8 +35,8 @@ def train():
     drawings = load_drawings("data/clock.ndjson", config.data_sparsity)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32, device=DEVICE)
-    print(drawings[0])
-    drawings = drawings[:1].repeat(10_000, 1, 1)
+    #print(drawings[0])
+    #drawings = drawings[:1].repeat(10_000, 1, 1)
     #exit(0)
 
     # Toy dataset

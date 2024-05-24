@@ -131,6 +131,8 @@ if __name__ == "__main__":
     """
 
     #""" draw one
+    temperature = 0.1
+
     drawings = load_drawings("data/clock.ndjson", 100)
     drawings = pad_drawings(drawings, config.max_sequence_length)
     drawings = torch.tensor(drawings, dtype=torch.float32)
@@ -176,7 +178,7 @@ if __name__ == "__main__":
         print(f"pen      : {next_output[5]}")
         print()
         delta_pred = next_output[:-1]
-        pen_pred = torch.nn.functional.softmax(next_output[-1], dim=2)
+        pen_pred = torch.nn.functional.softmax(next_output[-1] / temperature, dim=2)
 
         # generate pen state
         dist = torch.distributions.categorical.Categorical(probs=pen_pred)
@@ -184,7 +186,10 @@ if __name__ == "__main__":
         pen_state[0, 0, dist.sample()] = 1.0
 
         # generate delta
-        mixture_model = criterion.make_mixture_model(*delta_pred)
+        delta_pred_copy = delta_pred.copy()
+        delta_pred_copy[2] *= temperature
+        delta_pred_copy[3] *= temperature
+        mixture_model = criterion.make_mixture_model(*delta_pred_copy)
         next_delta = mixture_model.sample((1, ))[0]
 
         # pack into next state
