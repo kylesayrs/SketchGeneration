@@ -23,7 +23,7 @@ The original paper uses a softmax activation followed by `NLLLoss` to learn the 
 
 4. Train a toy dataset first
 
-I found that my best work was done when training using a toy dataset, rather than starting with the full dataset. Training on just a single sample helped me catch bugs and served as a basis for expected model output outside of just loss alone. 
+When training using highly custom models like this one, training using a toy dataset first, rather than starting with the full dataset. Training on just a single sample was vital to catching bugs and served as a basis for expected model output outside of just loss alone.
 
 
 ## Future work ##
